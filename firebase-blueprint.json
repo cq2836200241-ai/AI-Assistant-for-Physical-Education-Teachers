@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "LessonPlan": {
+      "title": "Lesson Plan",
+      "description": "A generated physical education lesson plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "content": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": "string" },
+        "grades": { "type": "array", "items": { "type": "string" } },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "content", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/lessonPlans/{planId}": {
+      "schema": { "$ref": "#/entities/LessonPlan" },
+      "description": "User's collection of lesson plans. We use a subcollection here for strict isolation by userId."
+    },
+    "/sharedPlans/{planId}": {
+      "schema": { "$ref": "#/entities/LessonPlan" },
+      "description": "Snapshots of lesson plans shared by users. These are publicly readable by ID."
+    }
+  }
+}

@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@plugin "@tailwindcss/typography";
+
+/* Indentation for reflection section */
+.prose h2.section-reflection + p {
+  text-indent: 2em;
+}
+
+@theme {
+  --color-primary-50: var(--theme-p-50);
+  --color-primary-100: var(--theme-p-100);
+  --color-primary-200: var(--theme-p-200);
+  --color-primary-300: var(--theme-p-300);
+  --color-primary-400: var(--theme-p-400);
+  --color-primary-500: var(--theme-p-500);
+  --color-primary-600: var(--theme-p-600);
+  --color-primary-700: var(--theme-p-700);
+  
+  --color-secondary-500: var(--theme-s-500);
+
+  --color-primary: var(--theme-p-600);
+  --color-primary-foreground: #ffffff;
+  
+  --color-slate-50: var(--theme-slate-50, #f8fafc);
+  --color-slate-100: var(--theme-slate-100, #f1f5f9);
+  --color-slate-200: var(--theme-slate-200, #e2e8f0);
+  --color-slate-300: var(--theme-slate-300, #cbd5e1);
+  --color-slate-400: var(--theme-slate-400, #94a3b8);
+  --color-slate-500: var(--theme-slate-500, #64748b);
+  --color-slate-600: var(--theme-slate-600, #475569);
+  --color-slate-700: var(--theme-slate-700, #334155);
+  --color-slate-800: var(--theme-slate-800, #1e293b);
+  --color-slate-900: var(--theme-slate-900, #0f172a);
+  --color-slate-950: var(--theme-slate-950, #020617);
+  --color-white: var(--theme-white, #ffffff);
+
+  --color-secondary: #f8fafc;
+  --color-secondary-foreground: #64748b;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #1e293b;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: var(--theme-p-600);
+  --color-background: var(--theme-bg, #f8fafc);
+  --color-foreground: #1e293b;
+  --color-card: #ffffff;
+  --color-card-foreground: #1e293b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #1e293b;
+
+  --font-sans: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+@layer base {
+  :root, [data-theme="ocean"] {
+    --theme-p-50: #f0fdfa; /* teal 50 */
+    --theme-p-100: #ccfbf1;
+    --theme-p-200: #99f6e4;
+    --theme-p-300: #5eead4;
+    --theme-p-400: #2dd4bf;
+    --theme-p-500: #14b8a6;
+    --theme-p-600: #0d9488;
+    --theme-p-700: #0f766e;
+    --theme-s-500: #10b981; /* emerald 500 */
+    --theme-bg: #f8fafc;
+  }
+
+  [data-theme="sunset"] {
+    --theme-p-50: #fff7ed; /* orange 50 */
+    --theme-p-100: #ffedd5;
+    --theme-p-200: #fed7aa;
+    --theme-p-300: #fdba74;
+    --theme-p-400: #fb923c;
+    --theme-p-500: #f97316;
+    --theme-p-600: #ea580c;
+    --theme-p-700: #c2410c;
+    --theme-s-500: #f43f5e; /* rose 500 */
+    --theme-bg: #fffbf7; /* warmer background */
+  }
+
+  [data-theme="minimal"] {
+    --theme-p-50: #f8fafc; /* slate 50 */
+    --theme-p-100: #f1f5f9;
+    --theme-p-200: #e2e8f0;
+    --theme-p-300: #cbd5e1;
+    --theme-p-400: #94a3b8;
+    --theme-p-500: #64748b;
+    --theme-p-600: #0f172a; /* slate 900 for dark minimal contrast */
+    --theme-p-700: #020617; /* slate 950 */
+    --theme-s-500: #334155; /* slate 700 */
+    --theme-bg: #ffffff; /* pure white background */
+  }
+
+  [data-theme="dark"] {
+    --theme-p-50: #1e1b4b;
+    --theme-p-100: #312e81;
+    --theme-p-200: #4338ca;
+    --theme-p-300: #4f46e5;
+    --theme-p-400: #6366f1;
+    --theme-p-500: #818cf8;
+    --theme-p-600: #6366f1;
+    --theme-p-700: #4f46e5;
+    --theme-s-500: #a855f7;
+    
+    --theme-bg: #09090b;
+    --theme-white: #18181b;
+    --theme-slate-50: #09090b;
+    --theme-slate-100: #18181b;
+    --theme-slate-200: #27272a;
+    --theme-slate-300: #3f3f46;
+    --theme-slate-400: #52525b;
+    --theme-slate-500: #a1a1aa;
+    --theme-slate-600: #d4d4d8;
+    --theme-slate-700: #e4e4e7;
+    --theme-slate-800: #f4f4f5;
+    --theme-slate-900: #fafafa;
+    --theme-slate-950: #ffffff;
+  }
+  [data-theme="dream"] {
+    --theme-p-50: #f5f3ff;
+    --theme-p-100: #ede9fe;
+    --theme-p-200: #ddd6fe;
+    --theme-p-300: #c4b5fd;
+    --theme-p-400: #a78bfa;
+    --theme-p-500: #8b5cf6;
+    --theme-p-600: #7c3aed;
+    --theme-p-700: #6d28d9;
+    --theme-s-500: #d946ef;
+    --theme-bg: #faf5ff;
+  }
+
+  [data-theme="cyan-blue"] {
+    --theme-p-50: #ecfeff; /* cyan 50 */
+    --theme-p-100: #cffafe;
+    --theme-p-200: #a5f3fc;
+    --theme-p-300: #67e8f9;
+    --theme-p-400: #22d3ee;
+    --theme-p-500: #06b6d4;
+    --theme-p-600: #0891b2;
+    --theme-p-700: #0e7490;
+    --theme-s-500: #2563eb; /* blue 600 */
+    --theme-bg: #f0f9ff; /* alice blue */
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  }
+  
+  .print-padding {
+    @media print {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
+}
+
+
+
+  #lesson-plan .markdown-body,
+  #lesson-plan .markdown-body p,
+  #lesson-plan .markdown-body li,
+  #lesson-plan .markdown-body table,
+  #lesson-plan .markdown-body td,
+  #lesson-plan .markdown-body th {
+    font-family: SimSun, "宋体", "Times New Roman", serif !important;
+    font-size: 14pt !important; /* 4号字体 */
+    line-height: 1.6;
+  }
+
+  #lesson-plan .markdown-body h1,
+  #lesson-plan .markdown-body h2,
+  #lesson-plan .markdown-body h3,
+  #lesson-plan .markdown-body h4 {
+    font-family: SimSun, "宋体", "Times New Roman", serif !important;
+    font-weight: bold !important;
+  }
+
+  #lesson-plan .markdown-body > h1:first-child {
+    text-align: center;
+    font-size: 16pt !important; /* 3号字体 */
+    margin-top: 0;
+  }
+
+  #lesson-plan .markdown-body > h1:first-child + p {
+    text-align: right;
+    font-size: 14pt !important; /* 4号字体 */
+    margin-bottom: 24px;
+    font-weight: normal !important;
+  }
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}

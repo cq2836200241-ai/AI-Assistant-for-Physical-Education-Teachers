@@ -1,0 +1,6 @@
+{
+  "name": "体育老师教案助手",
+  "description": "专为小学体育教师打造的智能教案生成系统。支持自定义年级、活动水平、场地与授课格式，快速生成结构严谨的体育大纲，可导出PDF/Word。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

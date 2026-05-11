@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isLessonPlan(data, checkAuth) {
+      return data.keys().hasAll(['id', 'title', 'content', 'userId', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() <= 500 &&
+        data.content is string && data.content.size() <= 100000 &&
+        (!checkAuth || data.userId == request.auth.uid) &&
+        data.createdAt == (checkAuth ? request.time : data.createdAt) && // Allow static timestamp for shared plans if not signed in, or just trust the write for shared
+        (data.get('summary', '') is string) &&
+        (data.get('date', '') is string) &&
+        (data.get('tags', []) is list) &&
+        (data.get('grades', []) is list);
+    }
+    
+    // Master Gate for /users/{userId}/lessonPlans
+    match /users/{userId} {
+      // We don't necessarily have a user doc, but we secure the subcollection.
+      match /lessonPlans/{planId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() && 
+          request.auth.uid == userId &&
+          isValidId(planId) && 
+          isLessonPlan(incoming(), true);
+
+        allow update: if isSignedIn() && 
+          request.auth.uid == userId &&
+          isValidId(planId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'content', 'tags', 'summary', 'grades']) &&
+          incoming().title is string && incoming().title.size() <= 500 &&
+          incoming().content is string && incoming().content.size() <= 100000 &&
+          incoming().get('tags', []) is list &&
+          incoming().get('summary', '') is string &&
+          incoming().get('grades', []) is list;
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // 2. Shared Plans (Publicly accessible snapshots)
+    match /sharedPlans/{planId} {
+      allow get: if true;
+      allow list: if false;
+      
+      allow create: if isValidId(planId) && 
+        isLessonPlan(incoming(), false);
+        
+      allow update: if isSignedIn() && 
+        isValidId(planId) &&
+        existing().userId == request.auth.uid &&
+        isLessonPlan(incoming(), true);
+        
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
