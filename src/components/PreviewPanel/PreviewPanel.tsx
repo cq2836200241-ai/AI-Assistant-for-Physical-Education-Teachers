@@ -7,27 +7,33 @@ import { Input } from "@/components/ui/input";
 import { LessonPlanViewer } from '../LessonPlanViewer/LessonPlanViewer';
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { saveAs } from 'file-saver';
+import html2pdf from 'html2pdf.js';
 import { exportMarkdownToWord } from '../../utils/markdownToDocx';
-import { downloadLessonPlanPdf } from '../../utils/exportPdf';
+import { motion, AnimatePresence } from 'motion/react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { deleteFromHistory, saveToHistory } from '../AuthScreen/AuthWrapper';
 
 import { TimetableTable } from '../TimetableTable/TimetableTable';
 import { MovementDecompositionTable } from '../MovementDecompositionTable/MovementDecompositionTable';
+import { GameLibraryWorkbench } from '../GameLibraryWorkbench/GameLibraryWorkbench';
+import { LessonPlanWorkbenchV2 } from '../LessonPlanWorkbenchV2/LessonPlanWorkbenchV2';
 
 interface PreviewPanelProps {
   onGenerate?: (isRegeneration?: boolean) => void;
   showSchedule?: boolean;
+  showGameLibrary?: boolean;
   showMovement?: boolean;
   showHistory?: boolean;
   showAdopted?: boolean;
+  showLessonPlanV2?: boolean;
   onToggleSchedule?: () => void;
+  onToggleGameLibrary?: () => void;
   onToggleMovement?: () => void;
   onToggleHistory?: () => void;
   onToggleAdopted?: () => void;
 }
 
-export function PreviewPanel({ onGenerate, showSchedule = false, showMovement = false, showHistory = false, showAdopted = false, onToggleSchedule, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
+export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
   const {
     currentPlanContent, isGenerating, form, generationStatus, generationProgress,
     previewedHistoryPlan, setPreviewedHistoryPlan,
@@ -136,8 +142,52 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showMovement = 
     }
   };
 
-  const handlePdf = () => {
-    window.print();
+  const handlePdf = async () => {
+    const contentToExport = isEditing ? editedContent : displayContent;
+    if (!contentToExport) return;
+
+    const { marked } = await import("marked");
+    const htmlBody = marked(contentToExport);
+
+    const gradeStr = displayGrades?.length > 0 ? displayGrades.join("、") : "";
+    const titleStr = displayTitle || "体育教案";
+
+    const fullHtml = [
+      "",
+      '  <div style="font-family:Microsoft YaHei,PingFang SC,sans-serif;font-size:14px;line-height:1.8;color:#1a1a1a;padding:20px;">',
+      '    <div style="border-bottom:2px solid #1a7a5e;padding-bottom:8px;margin-bottom:16px;display:flex;justify-content:space-between;">',
+      '      <span style="color:#1a7a5e;font-size:16px;font-weight:bold;">体育教案助手 · ' + titleStr + '</span>',
+      '      <span style="color:#888;font-size:12px;">' + gradeStr + '</span>',
+      '    </div>',
+      '    ' + htmlBody + '',
+      '  </div>',
+      '  <style>',
+      '    h1{font-size:20px;border-bottom:2px solid #ddd;padding-bottom:4px;color:#1a1a1a;}',
+      '    h2{font-size:16px;border-bottom:1.5px solid #ddd;padding-bottom:3px;color:#1a1a1a;}',
+      '    h3{font-size:14px;color:#333;}',
+      '    table{width:100%;border-collapse:collapse;margin:8px 0;}',
+      '    th{background:#1a7a5e;color:#fff;padding:6px 8px;font-size:13px;}',
+      '    td{padding:5px 8px;border:0.5px solid #ccc;font-size:13px;}',
+      '    tr:nth-child(even) td{background:#f9fafb;}',
+      '    ul,ol{padding-left:20px;}',
+      '    li{margin-bottom:4px;}',
+      '  </style>',
+    ].join("\n");
+
+    const element = document.createElement("div");
+    element.innerHTML = fullHtml;
+    document.body.appendChild(element);
+
+    await (html2pdf() as any).set({
+      margin: 15,
+      filename: gradeStr + "_" + titleStr + "_教案.pdf",
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+    }).from(element).save();
+
+    document.body.removeChild(element);
   };
 
   const handleEditToggle = () => {
@@ -194,7 +244,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showMovement = 
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      <div className={`px-3 sm:px-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-500 shrink-0 h-auto min-h-[48px] sm:h-[64px] py-2 sm:py-0 shadow-sm flex-wrap gap-y-1.5 ${(showMovement || showSchedule) ? 'hidden' : ''}`}>
+      <div className={`px-3 sm:px-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-500 shrink-0 h-auto min-h-[48px] sm:h-[64px] py-2 sm:py-0 shadow-sm flex-wrap gap-y-1.5 ${(showMovement || showSchedule || showGameLibrary) ? 'hidden' : ''}`}>
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <div className="font-semibold text-white/90 flex items-center gap-2 truncate" style={{ fontSize: '13px' }}>
             {(!!displayContent || isGenerating || !!previewedHistoryPlan) && (
@@ -249,74 +299,115 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showMovement = 
         </div>
       </div>
 
-      {showSchedule && (
-        <div className="absolute inset-0 z-20 bg-white overflow-y-auto">
-          <div className="px-4 py-6 sm:px-10 bg-slate-200/50 min-h-full">
-            <div className="w-full space-y-4">
-              <TimetableTable />
-              <div className="flex items-center justify-center gap-4 text-[11px] text-slate-400 pb-2">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-400" /> 五年级
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400" /> 四年级
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-orange-400" /> 三年级
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showSchedule && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <TimetableTable />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showMovement && (
-        <div className="absolute inset-0 z-20 bg-white overflow-y-auto">
-          <div className="px-4 py-6 sm:px-10 bg-[#f8fafc] min-h-full">
-            <div className="w-full">
-              <MovementDecompositionTable />
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showGameLibrary && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <GameLibraryWorkbench />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showHistory && (
-        <div className="absolute inset-0 z-20 bg-white overflow-y-auto">
-          <HistoryPanelContent 
-            history={history}
-            onLoadPlan={(plan) => {
-              setPreviewedHistoryPlan(plan);
-              onToggleHistory?.();
-            }}
-            onDeletePlan={(id) => {
-              removeHistory(id);
-              deleteFromHistory(id);
-            }}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {showMovement && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <MovementDecompositionTable />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showAdopted && (
-        <div className="absolute inset-0 z-20 bg-white overflow-y-auto">
-          <AdoptedPanelContent 
-            adoptedPlans={adoptedPlans}
-            onLoadPlan={(plan) => {
-              setPreviewedHistoryPlan({
-                id: plan.planId,
-                title: plan.title,
-                date: plan.dateAdopted,
-                content: plan.content,
-                tags: [plan.grade, plan.className],
-                summary: '',
-                grades: [plan.grade]
-              });
-              onToggleAdopted?.();
-            }}
-            onDeletePlan={(id) => removeAdoptedPlan(id)}
-            onClearClass={(grade, className) => clearAdoptedPlansByClass(grade, className)}
-          />
-        </div>
-      )}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-y-auto"
+          >
+            <HistoryPanelContent 
+              history={history}
+              onLoadPlan={(plan) => {
+                setPreviewedHistoryPlan(plan);
+                onToggleHistory?.();
+              }}
+              onDeletePlan={(id) => {
+                removeHistory(id);
+                deleteFromHistory(id);
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAdopted && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-y-auto"
+          >
+            <AdoptedPanelContent 
+              adoptedPlans={adoptedPlans}
+              onLoadPlan={(plan) => {
+                setPreviewedHistoryPlan({
+                  id: plan.planId,
+                  title: plan.title,
+                  date: plan.dateAdopted,
+                  content: plan.content,
+                  tags: [plan.grade, plan.className],
+                  summary: '',
+                  grades: [plan.grade]
+                });
+                onToggleAdopted?.();
+              }}
+              onDeletePlan={(id) => removeAdoptedPlan(id)}
+              onClearClass={(grade, className) => clearAdoptedPlansByClass(grade, className)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLessonPlanV2 && (
+          <motion.div
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <LessonPlanWorkbenchV2 />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isGenerating && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] max-w-md z-50 bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-primary-100 flex flex-col items-center">

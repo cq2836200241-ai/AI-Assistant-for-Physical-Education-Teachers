@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getDefaultClassCounts, EDUCATION_LEVELS } from '../constants/education';
 
 export interface FormState {
   grades: string[];
@@ -74,6 +75,15 @@ interface AppState {
   setActiveProviderId: (id: string) => void;
   updateProvider: (id: string, config: Partial<ProviderConfig>) => void;
   
+  // Education Settings
+  educationLevel: string;
+  setEducationLevel: (level: string) => void;
+  classCounts: Record<string, number>;
+  setClassCount: (grade: string, count: number) => void;
+  resetClassCounts: () => void;
+  
+  // Generation logic
+  
   // Generation logic
   isGenerating: boolean;
   generationProgress: number;
@@ -112,6 +122,8 @@ interface AppState {
   setAutoMist: (v: boolean) => void;
   isTimetableEditMode: boolean;
   setTimetableEditMode: (v: boolean) => void;
+  classReminderEnabled: boolean;
+  setClassReminderEnabled: (v: boolean) => void;
   
   // Adopted Plans
   adoptedPlans: AdoptedPlan[];
@@ -196,6 +208,21 @@ export const useAppStore = create<AppState>()(
         }
       })),
       
+      // Education Settings
+      educationLevel: 'primary',
+      setEducationLevel: (level) => {
+        set((state) => {
+          // 切换学段时清空年级选择
+          const newForm = { ...state.form, grades: [] };
+          return { educationLevel: level, form: newForm };
+        });
+      },
+      classCounts: getDefaultClassCounts(),
+      setClassCount: (grade, count) => set((state) => ({
+        classCounts: { ...state.classCounts, [grade]: count }
+      })),
+      resetClassCounts: () => set({ classCounts: getDefaultClassCounts() }),
+      
       isGenerating: false,
       generationProgress: 0,
       generationStatus: '',
@@ -239,6 +266,8 @@ export const useAppStore = create<AppState>()(
       setAutoMist: (v) => set({ autoMist: v }),
       isTimetableEditMode: false,
       setTimetableEditMode: (v) => set({ isTimetableEditMode: v }),
+      classReminderEnabled: false,
+      setClassReminderEnabled: (v) => set({ classReminderEnabled: v }),
       
       adoptedPlans: [],
       addAdoptedPlan: (plan) => set((state) => ({ adoptedPlans: [plan, ...state.adoptedPlans] })),
@@ -254,10 +283,13 @@ export const useAppStore = create<AppState>()(
         providers: state.providers,
         activeProviderId: state.activeProviderId,
         theme: state.theme,
+        educationLevel: state.educationLevel,
+        classCounts: state.classCounts,
         history: state.history,
         schedule: state.schedule,
         courseData: state.courseData,
         autoMist: state.autoMist,
+        classReminderEnabled: state.classReminderEnabled,
         adoptedPlans: state.adoptedPlans
       }),
     }

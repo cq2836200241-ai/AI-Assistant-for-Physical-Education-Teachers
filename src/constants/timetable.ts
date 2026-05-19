@@ -15,9 +15,9 @@ export interface CourseEntry {
 
 export const TIME_SLOTS: TimeSlot[] = [
   { id: 'am1', name: '第一节', startTime: '08:20', endTime: '09:00', type: 'morning' },
-  { id: 'am2', name: '第二节', startTime: '09:05', endTime: '09:45', type: 'morning' },
-  { id: 'break1', name: '大课间', startTime: '09:45', endTime: '10:15', type: 'break' },
-  { id: 'am3', name: '第三节', startTime: '10:15', endTime: '11:05', type: 'morning' },
+  { id: 'am2', name: '第二节', startTime: '09:15', endTime: '09:55', type: 'morning' },
+  { id: 'break1', name: '大课间', startTime: '09:55', endTime: '10:25', type: 'break' },
+  { id: 'am3', name: '第三节', startTime: '10:25', endTime: '11:05', type: 'morning' },
   { id: 'lunch', name: '午餐/午休', startTime: '11:05', endTime: '12:30', type: 'break' },
   { id: 'pm1', name: '第一节', startTime: '12:35', endTime: '13:15', type: 'afternoon' },
   { id: 'break2', name: '大课间', startTime: '13:15', endTime: '13:45', type: 'break' },

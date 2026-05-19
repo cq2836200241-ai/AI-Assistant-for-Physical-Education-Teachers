@@ -14,8 +14,8 @@ import { Play, Sparkles, Dices, Layers, Timer, Tag, Loader2, Sliders, Sun, Cloud
 import { useState, useRef, useEffect } from 'react';
 import { useAIProvider } from '../../hooks/useAIProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { getGradesByLevel } from '../../constants/education';
 
-const GRADE_OPTIONS = ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'];
 const ABILITY_LEVELS = [
   { id: '基础班', icon: '🔵', desc: '强调基础动作规范，降低难度' },
   { id: '普通班', icon: '🟡', desc: '按照大纲常规要求进行教学' },
@@ -23,7 +23,8 @@ const ABILITY_LEVELS = [
 ];
 
 export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: boolean) => void }) {
-  const { form, setForm, isGenerating, history, currentPlanContent } = useAppStore();
+  const { form, setForm, isGenerating, history, currentPlanContent, educationLevel } = useAppStore();
+  const gradeOptions = getGradesByLevel(educationLevel);
   const [isGeneratingTopic, setIsGeneratingTopic] = useState(false);
   const [isGeneratingFocus, setIsGeneratingFocus] = useState(false);
   
@@ -142,130 +143,119 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
                 年级与基础设置 <span className="text-red-500 text-[12px]">*</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 pt-1 space-y-5">
-              
-              <div className="space-y-2 mt-2">
-                <Label className="text-[14px] font-bold text-slate-500">年级选择 <span className="text-red-500">*</span></Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-[13px] sm:text-[14px]">
-                  {GRADE_OPTIONS.map((g) => (
-                    <Toggle 
-                      key={g}
-                      pressed={form.grades.includes(g)}
-                      onPressedChange={(pressed) => { if (pressed) setForm({ grades: [g] }) }}
-                      variant="outline"
-                      className={`px-2 py-2 h-auto rounded-lg transition-all duration-300 ${
-                        form.grades.includes(g) 
-                          ? '!bg-[#1d5398] !text-[#fff] scale-[1.08] border-[#1d5398] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1d5398] data-[state=on]:!text-[#fff]' 
-                          : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      {g}
-                    </Toggle>
-                  ))}
-                </div>
-              </div>
+             <AccordionContent className="px-4 pb-4 pt-1 space-y-4">
+               
+               <div className="space-y-2 mt-2">
+                 <Label className="text-[14px] font-bold text-slate-500">年级选择 <span className="text-red-500">*</span></Label>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-[13px] sm:text-[14px]">
+                   {gradeOptions.map((g) => (
+                     <Toggle 
+                       key={g}
+                       pressed={form.grades.includes(g)}
+                       onPressedChange={(pressed) => { if (pressed) setForm({ grades: [g] }) }}
+                       variant="outline"
+                       className={`px-2 py-2 h-auto rounded-lg transition-all duration-300 ${
+                         form.grades.includes(g) 
+                           ? '!bg-[#1d5398] !text-[#fff] scale-[1.08] border-[#1d5398] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1d5398] data-[state=on]:!text-[#fff]' 
+                           : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
+                       }`}
+                     >
+                       {g}
+                     </Toggle>
+                   ))}
+                 </div>
+               </div>
 
-              <div className="space-y-2">
-                <Label className="text-[14px] font-bold text-slate-500">学生能力水平 <span className="text-red-500">*</span></Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
-                  {ABILITY_LEVELS.map((level) => (
-                     <Tooltip key={level.id}>
-                      <TooltipTrigger
-                        render={
-                          <Toggle 
-                            pressed={form.ability === level.id}
-                            onPressedChange={(pressed) => { if (pressed) setForm({ ability: level.id }) }}
-                            variant="outline"
-                            className={`w-full px-2 py-2 h-auto flex items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
-                              form.ability === level.id
-                                ? '!bg-[#1c428d] !text-[#fff] scale-[1.05] border-[#1c428d] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1c428d] data-[state=on]:!text-[#fff]'
-                                : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            <span className="mr-0.5">{level.icon}</span> {level.id}
-                          </Toggle>
-                        }
-                      />
-                      <TooltipContent>
-                        <p className="text-[13px]">{level.desc}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </div>
-              </div>
+               <div className="space-y-2">
+                 <Label className="text-[14px] font-bold text-slate-500">学生能力水平 <span className="text-red-500">*</span></Label>
+                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
+                   {ABILITY_LEVELS.map((level) => (
+                      <Tooltip key={level.id}>
+                       <TooltipTrigger
+                         render={
+                           <Toggle 
+                             pressed={form.ability === level.id}
+                             onPressedChange={(pressed) => { if (pressed) setForm({ ability: level.id }) }}
+                             variant="outline"
+                             className={`w-full px-2 py-2 h-auto flex items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
+                               form.ability === level.id
+                                 ? '!bg-[#1c428d] !text-[#fff] scale-[1.05] border-[#1c428d] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1c428d] data-[state=on]:!text-[#fff]'
+                                 : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
+                             }`}
+                           >
+                             <span className="mr-0.5">{level.icon}</span> {level.id}
+                           </Toggle>
+                         }
+                       />
+                       <TooltipContent>
+                         <p className="text-[13px]">{level.desc}</p>
+                       </TooltipContent>
+                     </Tooltip>
+                   ))}
+                 </div>
+               </div>
 
-            </AccordionContent>
-          </AccordionItem>
+               <div className="border-t border-slate-100 pt-4"></div>
 
-          {/* Section 2: 课程核心内容 */}
-          <AccordionItem value="course-content" className="border border-slate-100 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden data-[state=open]:ring-1 data-[state=open]:ring-primary-600/10 transition-all">
-            <AccordionTrigger className="hover:no-underline group hover:bg-transparent data-[state=open]:hover:bg-slate-50/50 px-4 py-3.5 data-[state=open]:bg-slate-50/50 transition-all duration-300">
-              <div className="text-[17px] font-bold text-slate-700 flex items-center gap-2 transition-all duration-300 transform origin-left group-hover:scale-105"> 
-                <Timer className="w-5 h-5 text-primary-600 transition-transform duration-300 group-hover:scale-110" />
-                课程核心内容
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 pt-1 space-y-4">
-              
-              <div className="space-y-1.5 mt-2">
-                <div className="flex justify-between items-center mb-1">
-                  <Label className="text-[13px] text-slate-500">课程名称 (课题) <span className="text-red-500">*</span></Label>
-                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[12px] text-slate-500 hover:text-primary-600" onClick={handleRandom} disabled={isGeneratingTopic}>
-                    {isGeneratingTopic ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Dices className="w-4 h-4 mr-1" />}
-                    随机推荐
-                  </Button>
-                </div>
-                <Input 
-                  className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
-                  placeholder="如：前滚翻、跳绳" 
-                  value={form.courseName || ''}
-                  onChange={e => setForm({ courseName: e.target.value })}
-                />
-              </div>
+               <div className="space-y-1.5">
+                 <div className="flex justify-between items-center mb-1">
+                   <Label className="text-[13px] text-slate-500">课程名称 (课题) <span className="text-red-500">*</span></Label>
+                   <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[12px] text-slate-500 hover:text-primary-600" onClick={handleRandom} disabled={isGeneratingTopic}>
+                     {isGeneratingTopic ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Dices className="w-4 h-4 mr-1" />}
+                     随机推荐
+                   </Button>
+                 </div>
+                 <Input 
+                   className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                   placeholder="如：前滚翻、跳绳" 
+                   value={form.courseName || ''}
+                   onChange={e => setForm({ courseName: e.target.value })}
+                 />
+               </div>
 
-              <div className="flex gap-3">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-[13px] text-slate-500 block mb-1">课时时长</Label>
-                  <Select value={form.duration || '40分钟'} onValueChange={v => setForm({duration: v})}>
-                    <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="35分钟">35分钟</SelectItem>
-                      <SelectItem value="40分钟">40分钟 (推荐)</SelectItem>
-                      <SelectItem value="45分钟">45分钟</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5 w-28">
-                  <Label className="text-[13px] text-slate-500 block mb-1">班级人数</Label>
-                  <Input type="number" min={10} max={80} value={form.studentCount || 40} onChange={e => setForm({studentCount: parseInt(e.target.value)||40})} className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600" />
-                </div>
-              </div>
+               <div className="flex gap-3">
+                 <div className="space-y-1.5 flex-1">
+                   <Label className="text-[13px] text-slate-500 block mb-1">课时时长</Label>
+                   <Select value={form.duration || '40分钟'} onValueChange={v => setForm({duration: v})}>
+                     <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600">
+                       <SelectValue />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="35分钟">35分钟</SelectItem>
+                       <SelectItem value="40分钟">40分钟 (推荐)</SelectItem>
+                       <SelectItem value="45分钟">45分钟</SelectItem>
+                     </SelectContent>
+                   </Select>
+                 </div>
+                 <div className="space-y-1.5 w-28">
+                   <Label className="text-[13px] text-slate-500 block mb-1">班级人数</Label>
+                   <Input type="number" min={10} max={80} value={form.studentCount || 40} onChange={e => setForm({studentCount: parseInt(e.target.value)||40})} className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600" />
+                 </div>
+               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] text-slate-500 block mb-1">教学场地</Label>
-                  <Input 
-                    className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
-                    placeholder="如：操场,体育馆"
-                    value={form.venue || ''}
-                    onChange={e => setForm({ venue: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[13px] text-slate-500 block mb-1">教具器材</Label>
-                  <Input 
-                    className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
-                    placeholder="如：足球,跳绳"
-                    value={(form.equipments || []).join(',')}
-                    onChange={e => setForm({ equipments: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })}
-                  />
-                </div>
-              </div>
+               <div className="grid grid-cols-2 gap-3">
+                 <div className="space-y-1.5">
+                   <Label className="text-[13px] text-slate-500 block mb-1">教学场地</Label>
+                   <Input 
+                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                     placeholder="如：操场,体育馆"
+                     value={form.venue || ''}
+                     onChange={e => setForm({ venue: e.target.value })}
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <Label className="text-[13px] text-slate-500 block mb-1">教具器材</Label>
+                   <Input 
+                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                     placeholder="如：足球,跳绳"
+                     value={(form.equipments || []).join(',')}
+                     onChange={e => setForm({ equipments: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })}
+                   />
+                 </div>
+               </div>
 
-            </AccordionContent>
-          </AccordionItem>
+             </AccordionContent>
+           </AccordionItem>
 
           {/* Section 3: 风格与目标 */}
           <AccordionItem value="teaching-style" className="border border-slate-100 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden data-[state=open]:ring-1 data-[state=open]:ring-primary-600/10 transition-all">
@@ -471,15 +461,8 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
               </div>
             )}
           </Button>
-          {(!form.grades.length || !form.courseName) && (
-             <p className="text-[12px] text-center text-rose-300 mt-3 font-medium bg-rose-500/10 py-1.5 rounded-full border border-rose-500/20">请确保选择了年级并填写了课题名称</p>
-          )}
         </div>
       )}
-
-      <div className="mt-auto text-left text-white/50 text-[12px]">
-        软件制作人 程强
-      </div>
 
       {/* 预览配置 Modal */}
       <Dialog open={showPreviewModal} onOpenChange={(open) => {

@@ -1,0 +1,19 @@
+appId: com.phys-ed.lesson-planner
+productName: 智能体育教案助手
+directories:
+  output: release
+files:
+  - dist/**/*
+  - electron/**/*
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icon-64x64.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 智能体育教案助手

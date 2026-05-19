@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面板动画效果对比演示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0f4f8;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+  h1 { font-size: 28px; color: #1e293b; margin-bottom: 8px; }
+  .subtitle { color: #64748b; margin-bottom: 32px; font-size: 15px; }
+  
+  .demo-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+  }
+  
+  .demo-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .demo-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .demo-header h3 { font-size: 16px; color: #1e293b; }
+  .demo-header .tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .tag-spring { background: #dbeafe; color: #1d4ed8; }
+  .tag-fade { background: #fef3c7; color: #d97706; }
+  .tag-slide { background: #d1fae5; color: #059669; }
+  
+  .demo-preview {
+    position: relative;
+    height: 320px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  
+  .demo-preview .bg-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .demo-preview .panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+    pointer-events: none;
+  }
+  
+  .panel-content {
+    width: 85%;
+    height: 85%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 8px 32px rgba(99,102,241,0.3);
+  }
+  .panel-content .icon { font-size: 40px; margin-bottom: 12px; }
+  .panel-content .title { font-size: 18px; font-weight: 700; }
+  .panel-content .desc { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+  
+  .demo-controls {
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+  }
+  .demo-controls button {
+    flex: 1;
+    padding: 8px 0;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .demo-controls button:hover { transform: scale(1.02); }
+  .btn-open { background: #6366f1; color: white; }
+  .btn-close { background: #e2e8f0; color: #64748b; }
+  .btn-open:disabled, .btn-close:disabled { opacity: 0.4; cursor: not-allowed; }
+  
+  .demo-footer {
+    padding: 10px 20px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+  }
+  
+  /* ===== 动画方案一：右侧滑入 (Spring) ===== */
+  .panel-spring {
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .panel-spring.open {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  
+  /* ===== 动画方案二：淡入 + 上移 ===== */
+  .panel-fade {
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.35s ease-out;
+  }
+  .panel-fade.open {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  
+  /* ===== 动画方案三：从底部滑入 + 缩放 ===== */
+  .panel-slide {
+    transform: translateY(100%) scale(0.9);
+    opacity: 0;
+    transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .panel-slide.open {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  
+  /* 推荐标签 */
+  .recommend-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+    border: 1px solid #fecaca;
+    z-index: 10;
+  }
+</style>
+</head>
+<body>
+  <h1>🎬 面板动画效果对比</h1>
+  <p class="subtitle">点击"打开"查看动画效果，点击"关闭"查看退出效果</p>
+  
+  <div class="demo-container">
+    
+    <!-- 方案一：右侧滑入 (推荐) -->
+    <div class="demo-card">
+      <div class="demo-header">
+        <h3>✨ 右侧滑入</h3>
+        <span class="tag tag-spring">Spring 弹性</span>
+      </div>
+      <div class="demo-preview">
+        <div class="bg-layer">
+          <div style="text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">📋</div>
+            <div>教案预览区</div>
+          </div>
+        </div>
+        <div id="panelSpring" class="panel panel-spring">
+          <div class="panel-content">
+            <div class="icon">🏃</div>
+            <div class="title">运动拆解 / 智能课表</div>
+            <div class="desc">从右侧滑入，带弹性效果</div>
+          </div>
+        </div>
+        <div class="recommend-badge">⭐ 推荐</div>
+      </div>
+      <div class="demo-controls">
+        <button class="btn-open" onclick="openSpring()">打开</button>
+        <button class="btn-close" onclick="closeSpring()">关闭</button>
+      </div>
+      <div class="demo-footer">transition: cubic-bezier(0.34, 1.56, 0.64, 1)</div>
+    </div>
+    
+    <!-- 方案二：淡入 + 上移 -->
+    <div class="demo-card">
+      <div class="demo-header">
+        <h3>🌫️ 淡入上移</h3>
+        <span class="tag tag-fade">Fade 淡入</span>
+      </div>
+      <div class="demo-preview">
+        <div class="bg-layer">
+          <div style="text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">📋</div>
+            <div>教案预览区</div>
+          </div>
+        </div>
+        <div id="panelFade" class="panel panel-fade">
+          <div class="panel-content">
+            <div class="icon">🏃</div>
+            <div class="title">运动拆解 / 智能课表</div>
+            <div class="desc">淡入并轻微上移</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-controls">
+        <button class="btn-open" onclick="openFade()">打开</button>
+        <button class="btn-close" onclick="closeFade()">关闭</button>
+      </div>
+      <div class="demo-footer">transition: 0.35s ease-out</div>
+    </div>
+    
+    <!-- 方案三：底部滑入 + 缩放 -->
+    <div class="demo-card">
+      <div class="demo-header">
+        <h3>📤 底部滑入缩放</h3>
+        <span class="tag tag-slide">Slide 滑动</span>
+      </div>
+      <div class="demo-preview">
+        <div class="bg-layer">
+          <div style="text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">📋</div>
+            <div>教案预览区</div>
+          </div>
+        </div>
+        <div id="panelSlide" class="panel panel-slide">
+          <div class="panel-content">
+            <div class="icon">🏃</div>
+            <div class="title">运动拆解 / 智能课表</div>
+            <div class="desc">从底部滑入并缩放</div>
+          </div>
+        </div>
+      </div>
+      <div class="demo-controls">
+        <button class="btn-open" onclick="openSlide()">打开</button>
+        <button class="btn-close" onclick="closeSlide()">关闭</button>
+      </div>
+      <div class="demo-footer">transition: cubic-bezier(0.22, 1, 0.36, 1)</div>
+    </div>
+    
+  </div>
+
+  <div style="margin-top: 32px; max-width: 1100px; width: 100%;">
+    <div class="demo-card">
+      <div class="demo-header">
+        <h3>🎯 我的推荐</h3>
+        <span class="tag tag-spring">最佳选择</span>
+      </div>
+      <div style="padding: 20px; font-size: 14px; line-height: 1.8; color: #334155;">
+        <p><strong>⭐ 右侧滑入（Spring弹性）</strong> — 最适合这个场景，原因：</p>
+        <ul style="margin-top: 8px; padding-left: 20px;">
+          <li>四个面板覆盖在教案预览区上，从右侧滑入就像拉开抽屉，<strong>视觉直觉最自然</strong></li>
+          <li>Spring 弹性动画手感顺滑，不拖沓</li>
+          <li>退出时滑出到右侧，与进入方向一致，<strong>用户能感知面板的去向</strong></li>
+          <li>与左侧配置面板的折叠动画风格统一（都用了 spring）</li>
+        </ul>
+        <p style="margin-top: 12px; color: #64748b;">你觉得哪个效果更好？选好了我切换到 ACT MODE 帮你改代码！</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function openSpring() {
+      document.getElementById('panelSpring').classList.add('open');
+    }
+    function closeSpring() {
+      document.getElementById('panelSpring').classList.remove('open');
+    }
+    function openFade() {
+      document.getElementById('panelFade').classList.add('open');
+    }
+    function closeFade() {
+      document.getElementById('panelFade').classList.remove('open');
+    }
+    function openSlide() {
+      document.getElementById('panelSlide').classList.add('open');
+    }
+    function closeSlide() {
+      document.getElementById('panelSlide').classList.remove('open');
+    }
+  </script>
+</body>
+</html>

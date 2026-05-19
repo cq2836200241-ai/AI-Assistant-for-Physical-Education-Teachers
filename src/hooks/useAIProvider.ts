@@ -12,12 +12,9 @@ function getActiveProvider() {
 }
 
 /**
- * 获取 Provider 的 API Key（优先使用环境变量）
+ * 获取 Provider 的 API Key
  */
 function getApiKey(provider: ProviderConfig, providerId: string): string {
-  if (providerId === 'gemini') {
-    return provider.apiKey || process.env.GEMINI_API_KEY || '';
-  }
   return provider.apiKey || '';
 }
 
@@ -220,10 +217,7 @@ async function openaiGenerate(
   });
 
   if (!res.ok) {
-    if (res.status === 429) {
-      throw new Error('API请求频率超限或配额耗尽，请检查您的请求频率或API Key配额。');
-    }
-    throw new Error(`API Error: ${res.status}`);
+    await handleOpenAIError(res);
   }
   const data = await res.json();
   return data.choices?.[0]?.message?.content || '';
@@ -282,7 +276,7 @@ export const useAIProvider = () => {
     if (!provider) throw new Error('Provider not found');
 
     if (id === 'gemini') {
-      const apiKey = provider.apiKey || process.env.GEMINI_API_KEY;
+      const apiKey = provider.apiKey;
       if (!apiKey) throw new Error('请配置 Gemini API Key');
       return geminiGenerate(
         apiKey, provider.model,

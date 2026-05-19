@@ -5,9 +5,13 @@ import { buildPrompt } from './utils/promptBuilder';
 import { ConfigPanel } from './components/ConfigPanel/ConfigPanel';
 import { PreviewPanel } from './components/PreviewPanel/PreviewPanel';
 import { SettingsModal } from './components/SettingsModal/SettingsModal';
+import { ClassReminderWatcher } from './components/ClassReminderWatcher/ClassReminderWatcher';
 import { AuthWrapper, saveToHistory } from './components/AuthScreen/AuthWrapper';
 import { UserMenu } from './components/UserMenu/UserMenu';
-import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, BookmarkCheck, History } from 'lucide-react';
+import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, BookmarkCheck, History, LibraryBig, FileText } from 'lucide-react';
+import Lottie from 'lottie-react';
+import welcomeAnimation from './assets/animations/Welcome.json';
+import { initializeSeedDataV2 } from './utils/lessonPlanStorageV2';
 
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -24,11 +28,21 @@ function MainApp() {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showGameLibrary, setShowGameLibrary] = useState(false);
   const [showMovement, setShowMovement] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showAdopted, setShowAdopted] = useState(false);
+  const [showLessonPlanV2, setShowLessonPlanV2] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
 
+  // 当右侧功能界面任意一个展开时，自动折叠左侧工具栏
+  useEffect(() => {
+    const anyPanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
+    if (anyPanelOpen) {
+      setIsConfigCollapsed(true);
+    }
+  }, [showSchedule, showGameLibrary, showMovement, showHistory, showAdopted, showLessonPlanV2]);
 
   // 检测窗口宽度判断是否为移动端
   useEffect(() => {
@@ -65,16 +79,29 @@ function MainApp() {
     document.documentElement.setAttribute('data-theme', store.theme);
   }, [store.theme]);
 
+  // 初始化 V2 种子数据（仅首次打开时写入 localStorage）
+  useEffect(() => {
+    initializeSeedDataV2();
+  }, []);
+
   // 已移除 beforeunload 事件拦截 — 该事件在 EXE/Electron 环境中会静默阻止窗口关闭，
   // 导致关闭按钮失效。应用使用 Zustand persist 自动保存数据，无需此保护。
 
   const handleGenerate = async (isRegeneration: boolean = false) => {
+    // 收起所有功能面板
+    setShowSchedule(false);
+    setShowGameLibrary(false);
+    setShowMovement(false);
+    setShowHistory(false);
+    setShowAdopted(false);
+    setShowLessonPlanV2(false);
     store.setIsGenerating(true);
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
     store.setGenerationProgress(0);
 
-    const { systemPrompt, userPrompt } = buildPrompt(store.form, isRegeneration);
+    const { systemPrompt, userPrompt } = buildPrompt(store.form, isRegeneration, store.educationLevel);
+
     
     let generatedText = '';
     
@@ -145,8 +172,10 @@ function MainApp() {
       <header className="shrink-0 h-[64px] bg-gradient-to-r from-primary-500 to-secondary-500 border-b border-white/20 flex items-center justify-between px-4 sm:px-6 z-30 shadow-md">
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2 sm:gap-2.5 text-white tracking-tight sm:pr-4 sm:border-r sm:border-white/20 h-8">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm ring-1 ring-white/10">PE</div>
-            <span className="text-[clamp(0px,3.5vw,25px)] font-black text-white hidden sm:inline-block leading-tight">体育教案助手</span>
+            <div className="w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center overflow-hidden -ml-4 sm:-ml-6">
+              <Lottie animationData={welcomeAnimation} loop={true} className="w-full h-full" />
+            </div>
+            
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
@@ -168,15 +197,26 @@ function MainApp() {
               size="sm"
               className="gap-1.5 text-[12px] sm:text-[13px] h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border-white/25 shadow-none bg-transparent hover:bg-white/15 hover:border-white/40 transition-all text-white/90"
               onClick={() => {
+                // 收起所有功能面板
+                setShowSchedule(false);
+                setShowGameLibrary(false);
+                setShowMovement(false);
+                setShowHistory(false);
+                setShowAdopted(false);
+                setShowLessonPlanV2(false);
+                setSettingsOpen(false);
+                // 清空 AI 生成的教案预览内容
                 store.setCurrentPlanContent('');
                 store.setPreviewedHistoryPlan(null);
+                // 展开左侧工具栏
+                setIsConfigCollapsed(false);
               }}
             >
               <Home className="h-4 w-4 sm:h-5 sm:w-5 text-white/90" />
               <span className="hidden sm:inline text-[16px]">主页</span>
             </Button>
             
-            <SettingsModal />
+            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
           </div>
         </div>
         
@@ -186,10 +226,34 @@ function MainApp() {
             variant="outline"
             size="sm"
             onClick={() => {
-              setShowMovement(!showMovement);
+              setShowGameLibrary(!showGameLibrary);
+              setShowMovement(false);
               setShowSchedule(false);
               setShowHistory(false);
               setShowAdopted(false);
+              setShowLessonPlanV2(false);
+            }}
+            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
+              showGameLibrary
+                ? 'bg-white/20 border-white/60 text-white shadow-sm'
+                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
+            }`}
+          >
+            <LibraryBig className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">游戏库</span>
+            {showGameLibrary ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowMovement(!showMovement);
+              setShowGameLibrary(false);
+              setShowSchedule(false);
+              setShowHistory(false);
+              setShowAdopted(false);
+              setShowLessonPlanV2(false);
             }}
             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
               showMovement
@@ -208,9 +272,11 @@ function MainApp() {
             size="sm"
             onClick={() => {
               setShowSchedule(!showSchedule);
+              setShowGameLibrary(false);
               setShowMovement(false);
               setShowHistory(false);
               setShowAdopted(false);
+              setShowLessonPlanV2(false);
             }}
             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
               showSchedule
@@ -230,8 +296,10 @@ function MainApp() {
             onClick={() => {
               setShowAdopted(!showAdopted);
               setShowHistory(false);
+              setShowGameLibrary(false);
               setShowMovement(false);
               setShowSchedule(false);
+              setShowLessonPlanV2(false);
             }}
             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
               showAdopted
@@ -251,8 +319,10 @@ function MainApp() {
             onClick={() => {
               setShowHistory(!showHistory);
               setShowAdopted(false);
+              setShowGameLibrary(false);
               setShowMovement(false);
               setShowSchedule(false);
+              setShowLessonPlanV2(false);
             }}
             className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
               showHistory
@@ -263,6 +333,29 @@ function MainApp() {
             <History className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">教案库</span>
             {showHistory ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
+          </Button>
+
+          {/* 教案生成 (V2) 按钮 */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setShowLessonPlanV2(!showLessonPlanV2);
+              setShowHistory(false);
+              setShowAdopted(false);
+              setShowGameLibrary(false);
+              setShowMovement(false);
+              setShowSchedule(false);
+            }}
+            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
+              showLessonPlanV2
+                ? 'bg-white/20 border-white/60 text-white shadow-sm'
+                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">教案生成 (V2)</span>
+            {showLessonPlanV2 ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
           </Button>
         </div>
 
@@ -306,7 +399,7 @@ function MainApp() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
-                  className={`fixed top-1/2 -translate-y-1/2 z-50 bg-white border border-slate-200 shadow-[0_4px_12px_rgba(0,0,0,0.15)] rounded-full flex items-center justify-center text-slate-500 hover:text-primary-600 hover:border-primary-200 transition-all duration-300 overflow-visible`}
+                  className={`fixed top-1/2 -translate-y-1/2 z-50 bg-amber-400 border border-amber-500 shadow-[0_4px_12px_rgba(0,0,0,0.15)] rounded-full flex items-center justify-center text-white hover:bg-amber-500 hover:border-amber-600 transition-all duration-300 overflow-visible`}
                   style={{
                     left: isConfigCollapsed ? '6px' : '428px',
                     width: '17px',
@@ -338,21 +431,25 @@ function MainApp() {
         
         {/* Right Panel */}
         <section className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col relative shadow-sm">
-          <PreviewPanel 
+            <PreviewPanel 
             onGenerate={handleGenerate} 
             showSchedule={showSchedule}
+            showGameLibrary={showGameLibrary}
             showMovement={showMovement}
             showHistory={showHistory}
             showAdopted={showAdopted}
-            onToggleSchedule={() => { setShowSchedule(!showSchedule); setShowMovement(false); setShowHistory(false); setShowAdopted(false); }}
-            onToggleMovement={() => { setShowMovement(!showMovement); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); }}
-            onToggleHistory={() => { setShowHistory(!showHistory); setShowAdopted(false); setShowMovement(false); setShowSchedule(false); }}
-            onToggleAdopted={() => { setShowAdopted(!showAdopted); setShowHistory(false); setShowMovement(false); setShowSchedule(false); }}
+            showLessonPlanV2={showLessonPlanV2}
+            onToggleSchedule={() => { setShowSchedule(!showSchedule); setShowGameLibrary(false); setShowMovement(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleGameLibrary={() => { setShowGameLibrary(!showGameLibrary); setShowMovement(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleMovement={() => { setShowMovement(!showMovement); setShowGameLibrary(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleHistory={() => { setShowHistory(!showHistory); setShowAdopted(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
+            onToggleAdopted={() => { setShowAdopted(!showAdopted); setShowHistory(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
           />
 
         </section>
       </main>
 
+      <ClassReminderWatcher />
     </div>
   );
 }
