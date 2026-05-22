@@ -6,6 +6,7 @@
  */
 
 import seedData from '../date/lesson_plans_seed_v2.json';
+import { standardizeLessonPlanProcess } from './lessonPlanProcessStandard';
 
 export interface V2FormData {
   topic: string;
@@ -21,13 +22,16 @@ export interface V2FormData {
  */
 export function buildLessonPlanPromptV2(form: V2FormData) {
   // 提取第一篇教案作为 One-Shot 示例
-  const firstPlan = Array.isArray(seedData) && seedData.length > 0 ? seedData[0] : null;
+  const firstPlan = Array.isArray(seedData) && seedData.length > 0
+    ? standardizeLessonPlanProcess(seedData[0])
+    : null;
   const oneShotJson = firstPlan ? JSON.stringify(firstPlan, null, 2) : '{}';
 
   const systemPrompt = `你是一位资深中小学体育教研员，精通《国家学生体质健康标准》和体育课程设计。
 
 ## 核心指令
 请根据用户提供的课题信息，生成一份结构完整、科学合理的体育教案。
+教学过程必须具备真实课堂可执行性，避免泛泛而谈；每个环节都要体现组织方法、动作要点、练习方式、巡视纠错、学生反馈和安全控制。
 
 ## 输出格式要求（极其重要）
 你必须**只输出合法的 JSON**，不要包含任何 Markdown 代码块标记（如 \`\`\`json）、不要包含任何前缀标签、不要包含任何额外的解释文字。
@@ -73,7 +77,13 @@ export function buildLessonPlanPromptV2(form: V2FormData) {
         "学生活动": string,
         "安全与提示": string
       },
-      "3.2 趣味游戏：<游戏名称>": {
+      "3.2 比赛练习：<比赛名称>": {
+        "教学内容": string,
+        "教师活动": string,
+        "学生活动": string,
+        "安全与提示": string
+      },
+      "3.3 趣味游戏：<游戏名称>": {
         "教学内容": string,
         "教师活动": string,
         "学生活动": string,
@@ -107,7 +117,16 @@ ${oneShotJson}
 2. "教学过程"中的键名（如 "1.1 课堂常规"）必须保留数字编号格式。
 3. "安全措施"必须是字符串数组。
 4. "预计运动负荷"中的"平均心率"和"练习密度"使用中文描述（如"约125-135次/分钟"）。
-5. 不要添加任何示例中不存在的额外字段。`;
+5. 不要添加任何示例中不存在的额外字段。
+6. "基本部分"必须固定包含三项，且顺序不能改变：3.1 技能学习、3.2 比赛练习、3.3 趣味游戏。无论使用哪个大模型，都不得省略比赛或游戏。
+
+## 教学过程内容质量要求
+1. "教学内容"要写清具体练习或活动名称，并包含必要的组织形式、练习次数、距离、分组方式或评价标准。
+2. "教师活动"要体现教师的真实指导行为，例如示范、口令、观察、分层提示、个别纠错、保护帮助、组织轮换等。
+3. "学生活动"要体现学生实际做什么、如何合作、如何观察同伴、如何自评互评，不要只写"认真练习"这类空泛描述。
+4. "安全与提示"要针对该课题的高风险动作、场地器材、学生间距、落地缓冲、速度控制等写具体提醒。
+5. "基本部分"的技能、比赛、游戏要形成递进关系：先学动作要领，再进行规则明确的比赛练习，最后通过趣味游戏巩固技能。
+6. 每个字段建议 18-45 个汉字，语言精炼但信息量充足，适合直接展示在表格中阅读。`;
 
   const userPrompt = `请根据以下信息生成一份体育教案：
 

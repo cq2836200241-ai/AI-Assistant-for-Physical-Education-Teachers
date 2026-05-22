@@ -1,54 +1,21 @@
 # =========================
-# 1. 依赖噪音（必须忽略）
+# UI ASSETS POLICY (UPDATED)
 # =========================
-node_modules/
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
 
-# =========================
-# 2. 构建输出（AI不需要看）
-# =========================
-dist/
-build/
-out/
-.next/
-coverage/
+# ❗ DO NOT IGNORE UI ASSETS
 
-# =========================
-# 3. 缓存 / 临时文件
-# =========================
-.cache/
-*.log
-
-# =========================
-# 4. 环境配置（敏感 + 无意义上下文）
-# =========================
-.env
-.env.local
-.env.*.local
-
-# =========================
-# 5. 媒体文件（AI无法理解语义）
-# =========================
 *.png
 *.jpg
 *.jpeg
 *.gif
 *.svg
-*.mp4
-*.mp3
 
-# =========================
-# 6. 压缩包 / 二进制
-# =========================
-*.zip
-*.tar
-*.gz
-*.exe
+# Reason:
+# These files are NOT for DeepSeek to "understand visually"
+# They are used by Playwright MCP as debugging evidence:
+# - screenshots
+# - visual state capture
+# - UI regression detection
 
-# =========================
-# 7. AI无价值目录（可选优化）
-# =========================
-.git/
-.vscode/
+# DeepSeek only receives structured interpretation from MCP,
+# not raw image understanding.

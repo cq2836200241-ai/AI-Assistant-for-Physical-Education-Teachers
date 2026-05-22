@@ -11,7 +11,8 @@ import html2pdf from 'html2pdf.js';
 import { exportMarkdownToWord } from '../../utils/markdownToDocx';
 import { motion, AnimatePresence } from 'motion/react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { deleteFromHistory, saveToHistory } from '../AuthScreen/AuthWrapper';
+import { deleteFromHistory, saveToHistory, updateHistoryPlan } from '../AuthScreen/AuthWrapper';
+import { getCurrentUser } from '../../lib/session';
 
 import { TimetableTable } from '../TimetableTable/TimetableTable';
 import { MovementDecompositionTable } from '../MovementDecompositionTable/MovementDecompositionTable';
@@ -26,6 +27,7 @@ interface PreviewPanelProps {
   showHistory?: boolean;
   showAdopted?: boolean;
   showLessonPlanV2?: boolean;
+  onLessonPlanV2FullscreenChange?: (active: boolean) => void;
   onToggleSchedule?: () => void;
   onToggleGameLibrary?: () => void;
   onToggleMovement?: () => void;
@@ -33,7 +35,7 @@ interface PreviewPanelProps {
   onToggleAdopted?: () => void;
 }
 
-export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
+export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, onLessonPlanV2FullscreenChange, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
   const {
     currentPlanContent, isGenerating, form, generationStatus, generationProgress,
     previewedHistoryPlan, setPreviewedHistoryPlan,
@@ -199,39 +201,22 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
       store.setCurrentPlanContent(editedContent);
       
       if (previewedHistoryPlan) {
-        store.updateHistoryContent(previewedHistoryPlan.id, editedContent);
         const updatedPlan = { ...previewedHistoryPlan, content: editedContent, summary: editedContent.slice(0, 100).replace(/#/g, '') + '...' };
-        const currentUser = sessionStorage.getItem('currentUser');
-        if (currentUser) {
-          const historyKey = `history_${currentUser}`;
-          const historyStr = localStorage.getItem(historyKey);
-          if (historyStr) {
-            const history = JSON.parse(historyStr);
-            const idx = history.findIndex((h: any) => h.id === previewedHistoryPlan.id);
-            if (idx >= 0) {
-              history[idx] = updatedPlan;
-              localStorage.setItem(historyKey, JSON.stringify(history));
-            }
-          }
-        }
+        store.replaceHistoryPlan(updatedPlan);
+        void updateHistoryPlan(updatedPlan);
         store.setPreviewedHistoryPlan(updatedPlan);
       } else {
         const generatedId = store.lastGeneratedPlanId;
         if (generatedId) {
-          store.updateHistoryContent(generatedId, editedContent);
-          const updatedPlan = { id: generatedId, content: editedContent, summary: editedContent.slice(0, 100).replace(/#/g, '') + '...' };
-          const currentUser = sessionStorage.getItem('currentUser');
-          if (currentUser) {
-            const historyKey = `history_${currentUser}`;
-            const historyStr = localStorage.getItem(historyKey);
-            if (historyStr) {
-              const history = JSON.parse(historyStr);
-              const idx = history.findIndex((h: any) => h.id === generatedId);
-              if (idx >= 0) {
-                history[idx] = { ...history[idx], ...updatedPlan };
-                localStorage.setItem(historyKey, JSON.stringify(history));
-              }
-            }
+          const existingPlan = store.history.find((item) => item.id === generatedId);
+          const updatedPlan = existingPlan
+            ? { ...existingPlan, content: editedContent, summary: editedContent.slice(0, 100).replace(/#/g, '') + '...' }
+            : null;
+          if (updatedPlan) {
+            store.replaceHistoryPlan(updatedPlan);
+            void updateHistoryPlan(updatedPlan);
+          } else {
+            store.updateHistoryContent(generatedId, editedContent);
           }
         }
       }
@@ -404,7 +389,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="absolute inset-0 z-20 bg-white overflow-hidden"
           >
-            <LessonPlanWorkbenchV2 />
+            <LessonPlanWorkbenchV2 onFullscreenChange={onLessonPlanV2FullscreenChange} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -586,7 +571,7 @@ function HistoryPanelContent({
   }, [history, searchTerm]);
 
   const exportData = () => {
-    const username = sessionStorage.getItem('currentUser') || 'anonymous';
+    const username = getCurrentUser() || 'anonymous';
     const dataStr = JSON.stringify(history, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

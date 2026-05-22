@@ -2,7 +2,7 @@ import { TIME_SLOTS } from '../constants/timetable';
 import type { CourseEntry } from '../store/appStore';
 
 export const CLASS_REMINDER_LEAD_MINUTES = 5;
-const NOTIFIED_SESSION_KEY = 'pe_class_reminder_notified';
+let notifiedKeysMemory = new Set<string>();
 
 export function getBeijingDate(): Date {
   const now = new Date();
@@ -60,18 +60,11 @@ export function getDueReminders(
 }
 
 export function loadNotifiedKeys(): Set<string> {
-  try {
-    const raw = sessionStorage.getItem(NOTIFIED_SESSION_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw) as string[];
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
-  }
+  return new Set(notifiedKeysMemory);
 }
 
 export function saveNotifiedKeys(keys: Set<string>) {
-  sessionStorage.setItem(NOTIFIED_SESSION_KEY, JSON.stringify([...keys]));
+  notifiedKeysMemory = new Set(keys);
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -82,7 +75,70 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
+/** 播放短促炫酷的上升电子提示音 */
+export function playReminderSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // 主音：上升双音调
+    const notes = [523.25, 659.25, 783.99]; // C5 → E5 → G5（大三和弦上升）
+    const noteDuration = 0.12;
+    const gap = 0.08;
+
+    notes.forEach((freq, i) => {
+      const startTime = ctx.currentTime + i * (noteDuration + gap);
+
+      // 振荡器 - 方波 + 锯齿波混合，产生电子感
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'square';
+      osc1.frequency.setValueAtTime(freq, startTime);
+
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(freq * 2, startTime);
+
+      // 增益包络 - 快速起音 + 短促衰减
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + noteDuration);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(startTime);
+      osc1.stop(startTime + noteDuration);
+      osc2.start(startTime);
+      osc2.stop(startTime + noteDuration);
+    });
+
+    // 结尾加一个短促的"叮"泛音
+    const pingOsc = ctx.createOscillator();
+    pingOsc.type = 'sine';
+    pingOsc.frequency.setValueAtTime(1567.98, ctx.currentTime + notes.length * (noteDuration + gap)); // G6
+
+    const pingGain = ctx.createGain();
+    pingGain.gain.setValueAtTime(0, ctx.currentTime + notes.length * (noteDuration + gap));
+    pingGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + notes.length * (noteDuration + gap) + 0.01);
+    pingGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + notes.length * (noteDuration + gap) + 0.3);
+
+    pingOsc.connect(pingGain);
+    pingGain.connect(ctx.destination);
+    pingOsc.start(ctx.currentTime + notes.length * (noteDuration + gap));
+    pingOsc.stop(ctx.currentTime + notes.length * (noteDuration + gap) + 0.3);
+
+    // 自动释放 AudioContext
+    setTimeout(() => ctx.close(), 2000);
+  } catch {
+    // 静默失败，不影响提醒功能
+  }
+}
+
 export async function showClassReminderNotification(payload: ClassReminderPayload) {
+  // 播放提示音
+  playReminderSound();
+
   if (window.desktopReminder?.show) {
     await window.desktopReminder.show({ title: payload.title, body: payload.body, tag: payload.key });
     return;

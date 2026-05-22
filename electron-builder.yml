@@ -1,19 +1,33 @@
 appId: com.phys-ed.lesson-planner
 productName: 智能体育教案助手
+copyright: Copyright © 2026 智能体育教案助手
+electronDownload:
+  mirror: "https://registry.npmmirror.com/-/binary/electron/"
 directories:
   output: release
+  buildResources: public
 files:
   - dist/**/*
   - electron/**/*
+  - "!node_modules/**/*"
+asar: true
+asarUnpack:
+  - "**/*.node"
 win:
   target:
     - target: nsis
       arch:
         - x64
-  icon: public/icon-64x64.png
+  icon: public/icon.ico
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: 智能体育教案助手
+  installerIcon: public/icon.ico
+  uninstallerIcon: public/icon.ico
+  installerHeaderIcon: public/icon.ico
+  deleteAppDataOnUninstall: false
+  displayLanguageSelector: false
+  language: 2052

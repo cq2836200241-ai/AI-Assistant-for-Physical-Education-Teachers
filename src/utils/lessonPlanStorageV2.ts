@@ -1,4 +1,9 @@
 import seedData from '../date/lesson_plans_seed_v2.json';
+import { readDesktopStore, writeDesktopStore } from '../lib/desktopStorage';
+import {
+  standardizeLessonPlanProcess,
+  standardizeLessonPlansProcess,
+} from './lessonPlanProcessStandard';
 
 export interface LessonPlanV2 {
   课题名称: string;
@@ -35,8 +40,17 @@ export interface LessonPlanV2 {
   课后反思: string;
 }
 
-const STORAGE_KEY = 'lesson_plans_v2';
-const FAVORITES_KEY = 'lesson_plans_v2_favorites';
+const STORAGE_KEY = 'lesson-plans-v2';
+const FAVORITES_KEY = 'lesson-plans-v2-favorites';
+let plansCache: LessonPlanV2[] | null = null;
+let favoritesCache: LessonPlanV2[] | null = null;
+
+function matchesLessonPlan(a: LessonPlanV2, b: LessonPlanV2): boolean {
+  return (
+    a.课题名称 === b.课题名称 &&
+    a.场地与器材?.教学场地 === b.场地与器材?.教学场地
+  );
+}
 
 function isLessonPlanV2(value: unknown): value is LessonPlanV2 {
   if (!value || typeof value !== 'object') return false;
@@ -53,84 +67,85 @@ function isLessonPlanV2(value: unknown): value is LessonPlanV2 {
 }
 
 function getSeedPlans(): LessonPlanV2[] {
-  return Array.isArray(seedData) ? (seedData.filter(isLessonPlanV2) as LessonPlanV2[]) : [];
+  if (!Array.isArray(seedData)) return [];
+  return standardizeLessonPlansProcess(seedData.filter(isLessonPlanV2) as LessonPlanV2[]);
 }
 
-function readStoredPlans(): LessonPlanV2[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return parsed.filter(isLessonPlanV2);
-  } catch (error) {
-    console.warn('V2 教案库读取失败，将重新初始化。', error);
-    return null;
-  }
+async function readStoredPlans(): Promise<LessonPlanV2[] | null> {
+  const parsed = await readDesktopStore<unknown>(STORAGE_KEY, null);
+  if (!Array.isArray(parsed)) return null;
+  return standardizeLessonPlansProcess(parsed.filter(isLessonPlanV2));
 }
 
-function writeStoredPlans(plans: LessonPlanV2[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+async function writeStoredPlans(plans: LessonPlanV2[]) {
+  plansCache = plans;
+  await writeDesktopStore(STORAGE_KEY, plans);
 }
 
-export function initializeSeedDataV2() {
-  const stored = readStoredPlans();
+export async function initializeSeedDataV2() {
+  const stored = await readStoredPlans();
   if (stored && stored.length > 0) return;
-  writeStoredPlans(getSeedPlans());
+  await writeStoredPlans(getSeedPlans());
 }
 
-export function getAllLessonPlansV2(): LessonPlanV2[] {
-  const stored = readStoredPlans();
-  if (stored) return stored;
+export async function getAllLessonPlansV2(): Promise<LessonPlanV2[]> {
+  if (plansCache) return plansCache;
+  const stored = await readStoredPlans();
+  if (stored) {
+    plansCache = stored;
+    return stored;
+  }
   const seeds = getSeedPlans();
-  writeStoredPlans(seeds);
+  await writeStoredPlans(seeds);
   return seeds;
 }
 
-export function addLessonPlanV2(plan: LessonPlanV2) {
+export async function addLessonPlanV2(plan: LessonPlanV2) {
   if (!isLessonPlanV2(plan)) {
     throw new Error('教案数据结构不完整，无法保存到 V2 教案库。');
   }
-  const plans = getAllLessonPlansV2();
-  writeStoredPlans([plan, ...plans]);
+  const standardizedPlan = standardizeLessonPlanProcess(plan);
+  const plans = await getAllLessonPlansV2();
+  await writeStoredPlans([standardizedPlan, ...plans]);
+  return standardizedPlan;
 }
 
 /* ─── 教案收藏 ─── */
 
-export function getFavorites(): LessonPlanV2[] {
-  try {
-    const raw = localStorage.getItem(FAVORITES_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isLessonPlanV2);
-  } catch {
-    return [];
-  }
+export async function getFavorites(): Promise<LessonPlanV2[]> {
+  if (favoritesCache) return favoritesCache;
+  const parsed = await readDesktopStore<unknown>(FAVORITES_KEY, []);
+  favoritesCache = Array.isArray(parsed)
+    ? standardizeLessonPlansProcess(parsed.filter(isLessonPlanV2))
+    : [];
+  return favoritesCache;
 }
 
-export function addFavorite(plan: LessonPlanV2) {
+export async function addFavorite(plan: LessonPlanV2) {
   if (!isLessonPlanV2(plan)) return;
-  const favorites = getFavorites();
-  // 避免重复收藏（按课题名称 + 教学场地去重）
-  const exists = favorites.some(
-    (f) => f.课题名称 === plan.课题名称 && f.场地与器材?.教学场地 === plan.场地与器材?.教学场地
-  );
+  const standardizedPlan = standardizeLessonPlanProcess(plan);
+  const favorites = await getFavorites();
+  const exists = favorites.some((f) => matchesLessonPlan(f, standardizedPlan));
   if (exists) return;
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify([plan, ...favorites]));
+  favoritesCache = [standardizedPlan, ...favorites];
+  await writeDesktopStore(FAVORITES_KEY, favoritesCache);
 }
 
-export function removeFavorite(plan: LessonPlanV2) {
-  const favorites = getFavorites();
-  const filtered = favorites.filter(
-    (f) => !(f.课题名称 === plan.课题名称 && f.场地与器材?.教学场地 === plan.场地与器材?.教学场地)
-  );
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(filtered));
+export async function removeFavorite(plan: LessonPlanV2) {
+  const favorites = await getFavorites();
+  const filtered = favorites.filter((f) => !matchesLessonPlan(f, plan));
+  favoritesCache = filtered;
+  await writeDesktopStore(FAVORITES_KEY, filtered);
 }
 
-export function isFavorite(plan: LessonPlanV2): boolean {
-  const favorites = getFavorites();
-  return favorites.some(
-    (f) => f.课题名称 === plan.课题名称 && f.场地与器材?.教学场地 === plan.场地与器材?.教学场地
-  );
+export async function deleteLessonPlanV2(plan: LessonPlanV2): Promise<void> {
+  const plans = await getAllLessonPlansV2();
+  const filtered = plans.filter((p) => !matchesLessonPlan(p, plan));
+  await writeStoredPlans(filtered);
+  await removeFavorite(plan);
+}
+
+export async function isFavorite(plan: LessonPlanV2): Promise<boolean> {
+  const favorites = await getFavorites();
+  return favorites.some((f) => matchesLessonPlan(f, plan));
 }

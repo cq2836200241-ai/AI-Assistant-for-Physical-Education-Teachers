@@ -603,10 +603,16 @@ export function GameLibraryWorkbench() {
   const activeFilterCount = selectedTargets.length + selectedSpaces.length + selectedGroups.length + (searchTerm.trim() ? 1 : 0);
 
   useEffect(() => {
-    const userGames = loadUserGamesFromStorage();
-    if (userGames.length > 0) {
-      setLibraryGames(mergeLibraryWithUserGames(librarySeed, userGames));
-    }
+    let alive = true;
+    loadUserGamesFromStorage().then((userGames) => {
+      if (!alive) return;
+      if (userGames.length > 0) {
+        setLibraryGames(mergeLibraryWithUserGames(librarySeed, userGames));
+      }
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const resetFilters = () => {
@@ -667,7 +673,7 @@ export function GameLibraryWorkbench() {
     const savedGame = { ...selectedGame, id: `saved_${Date.now()}` };
     setLibraryGames((current) => {
       const next = [savedGame, ...current];
-      persistUserGames(next, seedIds);
+      void persistUserGames(next, seedIds);
       return next;
     });
     setSelectedGameId(savedGame.id);
@@ -680,7 +686,7 @@ export function GameLibraryWorkbench() {
   const handleCreateGame = (game: GameItem) => {
     setLibraryGames((current) => {
       const next = [game, ...current];
-      persistUserGames(next, seedIds);
+      void persistUserGames(next, seedIds);
       return next;
     });
     setSelectedGameId(game.id);

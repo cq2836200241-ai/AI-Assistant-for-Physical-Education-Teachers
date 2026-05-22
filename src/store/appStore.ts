@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { getDefaultClassCounts, EDUCATION_LEVELS } from '../constants/education';
 
 export interface FormState {
@@ -104,6 +103,8 @@ interface AppState {
   addHistory: (plan: LessonPlan) => void;
   removeHistory: (id: string) => void;
   updateHistoryContent: (id: string, content: string, summary?: string) => void;
+  replaceHistoryPlan: (plan: LessonPlan) => void;
+  setHistory: (history: LessonPlan[]) => void;
   clearHistory: () => void;
 
   
@@ -130,6 +131,20 @@ interface AppState {
   addAdoptedPlan: (plan: AdoptedPlan) => void;
   removeAdoptedPlan: (id: string) => void;
   clearAdoptedPlansByClass: (grade: string, className: string) => void;
+}
+
+export interface PersistedAppState {
+  form: FormState;
+  providers: Record<string, ProviderConfig>;
+  activeProviderId: string;
+  theme: string;
+  educationLevel: string;
+  classCounts: Record<string, number>;
+  schedule: Record<string, string>;
+  courseData: CourseEntry[];
+  autoMist: boolean;
+  classReminderEnabled: boolean;
+  adoptedPlans: AdoptedPlan[];
 }
 
 const defaultForm: FormState = {
@@ -190,9 +205,7 @@ const defaultCourseData: CourseEntry[] = [
   { day: 5, slotId: 'pm2', grade: '五', className: '3' },
 ];
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
+export const useAppStore = create<AppState>()((set) => ({
       form: defaultForm,
       setForm: (newForm) => set((state) => ({ form: { ...state.form, ...newForm } })),
       
@@ -249,6 +262,10 @@ export const useAppStore = create<AppState>()(
             : h
         )
       })),
+      replaceHistoryPlan: (plan) => set((state) => ({
+        history: state.history.map(h => h.id === plan.id ? plan : h)
+      })),
+      setHistory: (history) => set({ history }),
       clearHistory: () => set({ history: [] }),
 
       
@@ -275,23 +292,46 @@ export const useAppStore = create<AppState>()(
       clearAdoptedPlansByClass: (grade, className) => set((state) => ({ 
         adoptedPlans: state.adoptedPlans.filter(p => !(p.grade === grade && p.className === className)) 
       }))
-    }),
-    {
-      name: 'pe-lesson-planner-storage-v2',
-      partialize: (state) => ({
-        form: state.form,
-        providers: state.providers,
-        activeProviderId: state.activeProviderId,
-        theme: state.theme,
-        educationLevel: state.educationLevel,
-        classCounts: state.classCounts,
-        history: state.history,
-        schedule: state.schedule,
-        courseData: state.courseData,
-        autoMist: state.autoMist,
-        classReminderEnabled: state.classReminderEnabled,
-        adoptedPlans: state.adoptedPlans
-      }),
-    }
-  )
-);
+}));
+
+export function getPersistedAppState(state = useAppStore.getState()): PersistedAppState {
+  return {
+    form: state.form,
+    providers: state.providers,
+    activeProviderId: state.activeProviderId,
+    theme: state.theme,
+    educationLevel: state.educationLevel,
+    classCounts: state.classCounts,
+    schedule: state.schedule,
+    courseData: state.courseData,
+    autoMist: state.autoMist,
+    classReminderEnabled: state.classReminderEnabled,
+    adoptedPlans: state.adoptedPlans,
+  };
+}
+
+const REMOVED_THEMES = new Set(['dark', 'dream']);
+
+function resolveTheme(theme: string | undefined): string {
+  if (!theme || REMOVED_THEMES.has(theme)) return 'ocean';
+  return theme;
+}
+
+export function applyPersistedAppState(state: Partial<PersistedAppState>) {
+  useAppStore.setState({
+    form: { ...defaultForm, ...(state.form || {}) },
+    providers: {
+      ...defaultProviders,
+      ...(state.providers || {}),
+    },
+    activeProviderId: state.activeProviderId || 'gemini',
+    theme: resolveTheme(state.theme),
+    educationLevel: state.educationLevel || 'primary',
+    classCounts: state.classCounts || getDefaultClassCounts(),
+    schedule: state.schedule || {},
+    courseData: Array.isArray(state.courseData) ? state.courseData : defaultCourseData,
+    autoMist: Boolean(state.autoMist),
+    classReminderEnabled: Boolean(state.classReminderEnabled),
+    adoptedPlans: Array.isArray(state.adoptedPlans) ? state.adoptedPlans : [],
+  });
+}

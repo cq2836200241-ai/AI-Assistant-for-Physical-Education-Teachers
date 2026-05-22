@@ -1,21 +1,22 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
-import { AuthWrapper } from './components/AuthScreen/AuthWrapper';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import './index.css';
 import './styles/print.css';
 
 import { registerSW } from 'virtual:pwa-register';
 
-if ('serviceWorker' in navigator) {
+const isDesktop = import.meta.env.VITE_APP_PLATFORM === 'desktop';
+
+if (!isDesktop && 'serviceWorker' in navigator) {
   registerSW({ immediate: true });
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <App />
-    </BrowserRouter>
-  </StrictMode>,
+    </HashRouter>
+  </StrictMode>
 );

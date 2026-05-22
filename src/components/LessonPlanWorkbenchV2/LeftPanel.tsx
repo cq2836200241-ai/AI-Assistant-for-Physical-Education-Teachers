@@ -85,7 +85,7 @@ export function LeftPanel({
     }
   }
 
-  // AI 生成：调用 API → 解析 JSON → 存入 localStorage → 刷新列表并选中
+  // AI 生成：调用 API → 解析 JSON → 存入桌面数据文件 → 刷新列表并选中
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setIsGenerating(true);
@@ -105,11 +105,11 @@ export function LeftPanel({
         throw new Error('AI 返回的数据格式不正确，无法解析为有效的教案 JSON。请重试。');
       }
 
-      // 存入 localStorage
-      addLessonPlanV2(parsed);
+      // 存入桌面数据文件
+      const savedPlan = await addLessonPlanV2(parsed);
 
       // 自动选中新生成的教案
-      onPlanGenerated(parsed);
+      onPlanGenerated(savedPlan);
     } catch (err: any) {
       setErrorMsg(err.message || '生成失败，请检查 API 配置后重试。');
     } finally {
@@ -118,9 +118,9 @@ export function LeftPanel({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar">
       {/* 生成新教案表单 */}
-      <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800">
           <Sparkles className="h-4 w-4 text-amber-500" />
           生成新教案
@@ -202,12 +202,12 @@ export function LeftPanel({
       <button
         type="button"
         onClick={onToggleLibrary}
-        className="shrink-0 rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-primary-200 hover:bg-primary-50/40"
+        className="shrink-0 rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-primary-200 hover:bg-primary-50/40"
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-slate-800">
             <BookOpen className="h-4 w-4 shrink-0 text-primary-500" />
-            <span className="truncate">我的教案库 (V2)</span>
+            <span className="truncate">我的教案库</span>
             <span className="ml-1 shrink-0 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold text-primary-700 ring-1 ring-primary-100">
               共 {plansCount} 篇
             </span>
@@ -241,7 +241,7 @@ export function LeftPanel({
       <button
         type="button"
         onClick={onToggleFavorites}
-        className="flex shrink-0 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition hover:border-rose-200 hover:bg-rose-50/40"
+        className="flex shrink-0 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-rose-200 hover:bg-rose-50/40"
       >
         <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-slate-800">
           <Heart className="h-4 w-4 shrink-0 text-rose-500" />

@@ -1,14 +1,17 @@
 {
-  "name": "react-example",
+  "name": "pe-lesson-planner",
   "private": true,
   "version": "1.0.0",
+  "description": "AI 驱动的体育教案生成辅助工具，帮助体育教师快速生成专业教案",
+  "author": "智能体育教案助手",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://127.0.0.1:3000 && cross-env NODE_ENV=development VITE_DEV_SERVER_URL=http://127.0.0.1:3000 electron .\"",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://127.0.0.1:3000 && cross-env NODE_ENV=development VITE_DEV_SERVER_URL=http://127.0.0.1:3000 VITE_APP_PLATFORM=desktop electron .\"",
     "build": "vite build",
-    "electron:build": "npm run build && electron-builder",
+    "generate-icons": "node scripts/generate-icons.cjs",
+    "electron:build": "cross-env VITE_APP_PLATFORM=desktop npm run generate-icons && npm run build && electron-builder",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -62,6 +65,7 @@
     "cross-env": "^10.1.0",
     "electron": "^42.0.1",
     "electron-builder": "^26.8.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

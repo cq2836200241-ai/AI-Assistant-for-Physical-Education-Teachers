@@ -7,56 +7,66 @@
 
 export const USER_KEY = 'currentUser';
 export const LOCKED_KEY = 'isLocked';
-export const USERS_STORAGE_KEY = 'localUsers';
+
+let currentUserMemory: string | null = null;
+let lockedMemory = false;
 
 /** 获取当前登录用户 */
 export function getCurrentUser(): string | null {
-  return sessionStorage.getItem(USER_KEY);
+  return currentUserMemory;
 }
 
 /** 设置当前登录用户 */
-export function setCurrentUser(username: string): void {
-  sessionStorage.setItem(USER_KEY, username);
+export async function setCurrentUser(username: string): Promise<void> {
+  currentUserMemory = username;
+  lockedMemory = false;
+  await window.desktopSession?.set({ currentUser: username, locked: false });
 }
 
 /** 移除当前登录用户（登出） */
-export function removeCurrentUser(): void {
-  sessionStorage.removeItem(USER_KEY);
-  sessionStorage.removeItem(LOCKED_KEY);
+export async function removeCurrentUser(): Promise<void> {
+  currentUserMemory = null;
+  lockedMemory = false;
+  await window.desktopSession?.clear();
 }
 
 /** 检查账号是否锁定 */
 export function isLocked(): boolean {
-  return sessionStorage.getItem(LOCKED_KEY) === 'true';
+  return lockedMemory;
 }
 
 /** 锁定账号 */
-export function lockAccount(): void {
-  sessionStorage.setItem(LOCKED_KEY, 'true');
+export async function lockAccount(): Promise<void> {
+  lockedMemory = true;
+  await window.desktopSession?.set({ currentUser: currentUserMemory, locked: true });
 }
 
 /** 解锁账号 */
-export function unlockAccount(): void {
-  sessionStorage.removeItem(LOCKED_KEY);
+export async function unlockAccount(): Promise<void> {
+  lockedMemory = false;
+  await window.desktopSession?.set({ currentUser: currentUserMemory, locked: false });
+}
+
+export async function initializeSession(): Promise<{ currentUser: string | null; locked: boolean }> {
+  const session = await window.desktopSession?.get();
+  currentUserMemory = session?.currentUser ?? null;
+  lockedMemory = Boolean(session?.locked);
+  return { currentUser: currentUserMemory, locked: lockedMemory };
 }
 
 /** 获取所有已注册的用户 */
-export function getUsers(): Record<string, { password: string }> {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || '{}');
-  } catch {
-    return {};
-  }
+export async function getUsers(): Promise<string[]> {
+  return window.desktopAuth?.listUsers() ?? [];
 }
 
 /** 验证用户密码 */
-export function verifyPassword(username: string, password: string): boolean {
-  const users = getUsers();
-  return users[username]?.password === password;
+export async function verifyPassword(username: string, password: string): Promise<boolean> {
+  const result = await window.desktopAuth?.login({ username, password });
+  return Boolean(result?.ok);
 }
 
 /** 登出：清空会话并刷新页面 */
-export function logout(): void {
-  removeCurrentUser();
+export async function logout(): Promise<void> {
+  await removeCurrentUser();
   window.location.reload();
 }

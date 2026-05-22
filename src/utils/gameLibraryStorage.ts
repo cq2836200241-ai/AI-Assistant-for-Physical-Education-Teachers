@@ -1,23 +1,22 @@
 import type { GameItem } from '../types/gameItem';
+import { readDesktopStore, writeDesktopStore } from '../lib/desktopStorage';
 
-/** 浏览器本地 JSON 库存储键（与内置 large_class_games.json 合并展示） */
-export const USER_GAMES_STORAGE_KEY = 'pe_saved_game_library_items';
+/** 桌面 JSON 游戏库存储键（与内置 large_class_games.json 合并展示） */
+export const USER_GAMES_STORAGE_KEY = 'saved-game-library-items';
 
-export function loadUserGamesFromStorage(): GameItem[] {
+export async function loadUserGamesFromStorage(): Promise<GameItem[]> {
   try {
-    const saved = localStorage.getItem(USER_GAMES_STORAGE_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved) as GameItem[];
-    return Array.isArray(parsed) ? parsed.filter((game) => game?.id) : [];
+    const parsed = await readDesktopStore<unknown>(USER_GAMES_STORAGE_KEY, []);
+    return Array.isArray(parsed) ? parsed.filter((game) => game?.id) as GameItem[] : [];
   } catch (error) {
-    console.warn('Failed to load user games from local JSON storage', error);
+    console.warn('Failed to load user games from desktop JSON storage', error);
     return [];
   }
 }
 
-export function persistUserGames(games: GameItem[], seedIds: Set<string>) {
+export async function persistUserGames(games: GameItem[], seedIds: Set<string>) {
   const userGames = games.filter((game) => game?.id && !seedIds.has(game.id));
-  localStorage.setItem(USER_GAMES_STORAGE_KEY, JSON.stringify(userGames));
+  await writeDesktopStore(USER_GAMES_STORAGE_KEY, userGames);
 }
 
 export function mergeLibraryWithUserGames(seed: GameItem[], userGames: GameItem[]): GameItem[] {

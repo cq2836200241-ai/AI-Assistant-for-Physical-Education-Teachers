@@ -23,9 +23,9 @@ export function UserMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLock = () => {
-    lockAccount();
-    logout();
+  const handleLock = async () => {
+    await lockAccount();
+    window.location.reload();
   };
 
   return (

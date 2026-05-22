@@ -4,6 +4,7 @@ import { Activity, Target, Zap, ChevronRight, Info, Search, Loader2, History, Do
 import { useAIProvider } from '../../hooks/useAIProvider';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { readDesktopStore, writeDesktopStore } from '../../lib/desktopStorage';
 
 interface MovementProgression {
   step: string;
@@ -21,6 +22,7 @@ interface FavoriteItem {
 
 const STORAGE_KEY_FAVORITES = 'movement_favorites';
 const STORAGE_KEY_LAST_RESULT = 'movement_last_search_result';
+const STORAGE_KEY_HISTORY = 'movement_search_history';
 
 const DEFAULT_DATA: MovementProgression[] = [
   {
@@ -74,35 +76,28 @@ export function MovementDecompositionTable() {
 
   // Load history, favorites and last search result on mount
   useEffect(() => {
-    const savedHistory = localStorage.getItem('movement_search_history');
-    if (savedHistory) {
-      try {
-        setSearchHistory(JSON.parse(savedHistory));
-      } catch (e) {
-        console.error('Failed to parse search history', e);
-      }
-    }
-    const savedFavorites = localStorage.getItem(STORAGE_KEY_FAVORITES);
-    if (savedFavorites) {
-      try {
-        setFavorites(JSON.parse(savedFavorites));
-      } catch (e) {
-        console.error('Failed to parse favorites', e);
-      }
-    }
-    // 加载最后一次搜索结果，优先显示而不是默认的"标准短跑起跑"
-    const lastResult = localStorage.getItem(STORAGE_KEY_LAST_RESULT);
-    if (lastResult) {
-      try {
-        const parsed = JSON.parse(lastResult);
+    let alive = true;
+    Promise.all([
+      readDesktopStore<string[]>(STORAGE_KEY_HISTORY, []),
+      readDesktopStore<FavoriteItem[]>(STORAGE_KEY_FAVORITES, []),
+      readDesktopStore<{ name?: string; data?: MovementProgression[] } | null>(STORAGE_KEY_LAST_RESULT, null),
+    ]).then(([savedHistory, savedFavorites, lastResult]) => {
+      if (!alive) return;
+      if (Array.isArray(savedHistory)) setSearchHistory(savedHistory);
+      if (Array.isArray(savedFavorites)) setFavorites(savedFavorites);
+      if (lastResult) {
+        const parsed = lastResult;
         if (parsed.data && Array.isArray(parsed.data) && parsed.data.length > 0) {
           setData(parsed.data);
-          setMovementName(parsed.name);
+          setMovementName(parsed.name || '动作拆解');
         }
-      } catch (e) {
-        console.error('Failed to parse last search result', e);
       }
-    }
+    }).catch((error) => {
+      console.error('Failed to load movement desktop storage', error);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // Click outside to close favorites panel
@@ -130,7 +125,7 @@ export function MovementDecompositionTable() {
     };
     const updated = [newItem, ...favorites.filter(f => f.name !== movementName)].slice(0, 20);
     setFavorites(updated);
-    localStorage.setItem(STORAGE_KEY_FAVORITES, JSON.stringify(updated));
+    void writeDesktopStore(STORAGE_KEY_FAVORITES, updated);
     setFavoriteAdded(true);
     setTimeout(() => setFavoriteAdded(false), 2000);
   };
@@ -138,7 +133,7 @@ export function MovementDecompositionTable() {
   const removeFavorite = (id: string) => {
     const updated = favorites.filter(f => f.id !== id);
     setFavorites(updated);
-    localStorage.setItem(STORAGE_KEY_FAVORITES, JSON.stringify(updated));
+    void writeDesktopStore(STORAGE_KEY_FAVORITES, updated);
   };
 
   const loadFavorite = (item: FavoriteItem) => {
@@ -150,12 +145,12 @@ export function MovementDecompositionTable() {
   const addToHistory = (term: string) => {
     const updated = [term, ...searchHistory.filter(h => h !== term)].slice(0, 8);
     setSearchHistory(updated);
-    localStorage.setItem('movement_search_history', JSON.stringify(updated));
+    void writeDesktopStore(STORAGE_KEY_HISTORY, updated);
   };
 
   const clearHistory = () => {
     setSearchHistory([]);
-    localStorage.removeItem('movement_search_history');
+    void writeDesktopStore(STORAGE_KEY_HISTORY, []);
   };
 
   const exportToPDF = async () => {
@@ -245,7 +240,7 @@ export function MovementDecompositionTable() {
     e.stopPropagation();
     const updated = searchHistory.filter(h => h !== term);
     setSearchHistory(updated);
-    localStorage.setItem('movement_search_history', JSON.stringify(updated));
+    void writeDesktopStore(STORAGE_KEY_HISTORY, updated);
   }, [searchHistory]);
 
   const handleSearch = async (e?: React.FormEvent, termOverride?: string) => {
@@ -279,8 +274,8 @@ export function MovementDecompositionTable() {
         setMovementName(term);
         addToHistory(term);
         setSearchTerm(''); // Clear search after success
-        // 保存最后一次搜索结果到 localStorage，下次打开时自动显示
-        localStorage.setItem(STORAGE_KEY_LAST_RESULT, JSON.stringify({ name: term, data: parsedData }));
+        // 保存最后一次搜索结果到桌面数据文件，下次打开时自动显示
+        void writeDesktopStore(STORAGE_KEY_LAST_RESULT, { name: term, data: parsedData });
       } else {
         throw new Error('返回数据格式不正确');
       }

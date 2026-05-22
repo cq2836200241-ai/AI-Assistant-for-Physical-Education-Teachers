@@ -11,9 +11,14 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
+  // 桌面版（Electron）不显示 PWA 安装入口
+  const isDesktop = import.meta.env.VITE_APP_PLATFORM === 'desktop';
+
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    if (isDesktop) return;
+
     const handler = (e: Event) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
@@ -24,7 +29,7 @@ export function usePWAInstall() {
     window.addEventListener('beforeinstallprompt', handler);
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  }, [isDesktop]);
 
   const installPWA = async () => {
     if (!deferredPrompt) return;
