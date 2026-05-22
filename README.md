@@ -1,3 +1,6 @@
+> ⚠️ **版权声明与使用限制**
+> 本项目仅供学习交流与个人研究使用。**未经作者明确授权，严禁任何形式的商业使用、打包转售或用于盈利性活动。** 
+> 本项目遵循 CC BY-NC-SA 4.0 协议，详情请查看 LICENSE 文件。一经发现违规商用，作者保留追究法律责任的权利。
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
