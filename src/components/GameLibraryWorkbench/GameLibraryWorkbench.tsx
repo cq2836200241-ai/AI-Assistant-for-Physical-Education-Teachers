@@ -572,8 +572,10 @@ export function GameLibraryWorkbench() {
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [selectedGameId, setSelectedGameId] = useState(librarySeed[0]?.id ?? '');
-  const [selectedSource, setSelectedSource] = useState<GameSource>('local');
+  const selectedGameId = useAppStore((s) => s.selectedGameId);
+  const selectedSource = useAppStore((s) => s.selectedGameSource) as GameSource;
+  const setSelectedGameId = useAppStore((s) => s.setSelectedGameId);
+  const setSelectedGameSource = useAppStore((s) => s.setSelectedGameSource);
   const [aiForm, setAiForm] = useState<AiFormState>({ groupSize: '', spaceType: '', equipment: '', target: '', context: '' });
   const [aiGames, setAiGames] = useState<GameItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -660,7 +662,7 @@ export function GameLibraryWorkbench() {
       setGenerationRound(nextRound);
       setAiGames(nextGames);
       setSelectedGameId(nextGames[0].id);
-      setSelectedSource('ai');
+      setSelectedGameSource('ai');
     } catch (error: any) {
       setGenerationError(error?.message || 'AI 生成失败，请检查 API 设置后重试。');
     } finally {
@@ -677,7 +679,7 @@ export function GameLibraryWorkbench() {
       return next;
     });
     setSelectedGameId(savedGame.id);
-    setSelectedSource('local');
+    setSelectedGameSource('local');
     setActiveTab('library');
     setSaveMessage('已加入游戏库，并保存到本地 JSON 库。');
     window.setTimeout(() => setSaveMessage(''), 3600);
@@ -690,7 +692,7 @@ export function GameLibraryWorkbench() {
       return next;
     });
     setSelectedGameId(game.id);
-    setSelectedSource('local');
+    setSelectedGameSource('local');
     setActiveTab('library');
     setSaveMessage('游戏已创建并保存到本地 JSON 库。');
     window.setTimeout(() => setSaveMessage(''), 3600);
@@ -698,7 +700,7 @@ export function GameLibraryWorkbench() {
 
   const pickGame = (game: GameItem, source: GameSource) => {
     setSelectedGameId(game.id);
-    setSelectedSource(source);
+    setSelectedGameSource(source);
     setSaveMessage('');
   };
 

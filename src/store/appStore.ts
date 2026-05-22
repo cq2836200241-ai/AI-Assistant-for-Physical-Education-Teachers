@@ -131,6 +131,12 @@ interface AppState {
   addAdoptedPlan: (plan: AdoptedPlan) => void;
   removeAdoptedPlan: (id: string) => void;
   clearAdoptedPlansByClass: (grade: string, className: string) => void;
+  
+  // Game Library Preview Memory
+  selectedGameId: string;
+  selectedGameSource: 'local' | 'ai';
+  setSelectedGameId: (id: string) => void;
+  setSelectedGameSource: (source: 'local' | 'ai') => void;
 }
 
 export interface PersistedAppState {
@@ -291,7 +297,12 @@ export const useAppStore = create<AppState>()((set) => ({
       removeAdoptedPlan: (id) => set((state) => ({ adoptedPlans: state.adoptedPlans.filter(p => p.id !== id) })),
       clearAdoptedPlansByClass: (grade, className) => set((state) => ({ 
         adoptedPlans: state.adoptedPlans.filter(p => !(p.grade === grade && p.className === className)) 
-      }))
+      })),
+
+      selectedGameId: '',
+      selectedGameSource: 'local' as 'local' | 'ai',
+      setSelectedGameId: (id) => set({ selectedGameId: id }),
+      setSelectedGameSource: (source) => set({ selectedGameSource: source })
 }));
 
 export function getPersistedAppState(state = useAppStore.getState()): PersistedAppState {
