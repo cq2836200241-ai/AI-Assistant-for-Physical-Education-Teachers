@@ -1,26 +1,38 @@
 import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import {
   AlertTriangle,
+  BookOpen,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Download,
   Gauge,
+  Heart,
   LayoutGrid,
   Loader2,
   MapPin,
   RefreshCcw,
   Search,
-  SlidersHorizontal,
   Sparkles,
   Star,
   Target,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
 import gameData from '../../date/large_class_games.json';
 import { CreateGameDialog } from './CreateGameDialog';
 import type { GameItem } from '../../types/gameItem';
-import { loadUserGamesFromStorage, mergeLibraryWithUserGames, persistUserGames } from '../../utils/gameLibraryStorage';
+import {
+  loadFavoriteGamesFromStorage,
+  loadHiddenSeedGameIdsFromStorage,
+  loadUserGamesFromStorage,
+  mergeLibraryWithUserGames,
+  persistFavoriteGames,
+  persistHiddenSeedGameIds,
+  persistUserGames,
+} from '../../utils/gameLibraryStorage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,10 +46,72 @@ import { useAppStore } from '../../store/appStore';
 
 type FilterKey = 'targets' | 'space_type' | 'group_size';
 type GameSource = 'local' | 'ai';
-type TabMode = 'library' | 'ai';
+type TabMode = 'ai' | 'library' | 'favorites';
+type AiViewMode = 'form' | 'result';
+
+interface GameListViewState {
+  searchTerm: string;
+  selectedTargets: string[];
+  selectedSpaces: string[];
+  selectedGroups: string[];
+  scrollTop: number;
+}
 
 const librarySeed = gameData as GameItem[];
 const seedIds = new Set(librarySeed.map((game) => game.id));
+const GAME_LIBRARY_VIEW_STATE_KEY = 'game-library-workbench-view-state-v1';
+
+const emptyListViewState: GameListViewState = {
+  searchTerm: '',
+  selectedTargets: [],
+  selectedSpaces: [],
+  selectedGroups: [],
+  scrollTop: 0,
+};
+
+function getGameOrigin(game: GameItem) {
+  if (game.id.startsWith('ai_') || game.id.startsWith('saved_')) return 'ai';
+  if (game.id.startsWith('custom_')) return 'custom';
+  if (seedIds.has(game.id)) return 'seed';
+  return 'library';
+}
+
+function readStoredWorkbenchViewState(): {
+  activeTab: TabMode;
+  library: GameListViewState;
+  favorites: GameListViewState;
+} {
+  if (typeof window === 'undefined') {
+    return { activeTab: 'ai', library: emptyListViewState, favorites: emptyListViewState };
+  }
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(GAME_LIBRARY_VIEW_STATE_KEY) || '{}');
+    const activeTab = parsed.activeTab === 'library' || parsed.activeTab === 'favorites' || parsed.activeTab === 'ai'
+      ? parsed.activeTab
+      : 'ai';
+    return {
+      activeTab,
+      library: { ...emptyListViewState, ...(parsed.library || {}) },
+      favorites: { ...emptyListViewState, ...(parsed.favorites || {}) },
+    };
+  } catch {
+    return { activeTab: 'ai', library: emptyListViewState, favorites: emptyListViewState };
+  }
+}
+
+function writeStoredWorkbenchViewState(state: {
+  activeTab: TabMode;
+  library: GameListViewState;
+  favorites: GameListViewState;
+}) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(GAME_LIBRARY_VIEW_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // 本地浏览状态只是体验增强，写入失败时不阻断游戏库使用。
+  }
+}
 
 const selectOptions = {
   groupSize: ['小组课(12-20人)', '中等班额(25-35人)', '标准行政班(40-50人)', '超大班额(50人以上)'],
@@ -319,36 +393,440 @@ function TagList({ items, tone = 'slate' }: { items: string[]; tone?: 'slate' | 
   );
 }
 
-function GameCard({ game, active, source, onClick }: { game: GameItem; active: boolean; source: GameSource; onClick: () => void }) {
-  const isCustom = game.id.startsWith('custom_');
+function GameCard({
+  game,
+  active,
+  source: sourceProp,
+  onClick,
+  actionLabel,
+  actionIcon,
+  actionTone = 'danger',
+  onAction,
+}: {
+  game: GameItem;
+  active: boolean;
+  source: GameSource;
+  onClick: () => void;
+  actionLabel?: string;
+  actionIcon?: ReactNode;
+  actionTone?: 'danger' | 'rose';
+  onAction?: () => void;
+}) {
+  const origin = getGameOrigin(game);
+  const isCustom = origin === 'custom';
+  const isAiGenerated = origin === 'ai';
+  const isBuiltIn = origin === 'seed';
+  const source = isAiGenerated ? 'ai' : sourceProp;
   const durationLabel = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} 分钟` : '—';
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        'group flex min-h-[168px] flex-col rounded-lg border bg-white p-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg',
+        'group relative flex min-h-[168px] flex-col rounded-lg border bg-white p-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg',
         active ? 'border-primary-300 ring-2 ring-primary-100' : 'border-slate-200',
         isCustom && 'border-emerald-200'
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="line-clamp-2 text-[15px] font-black leading-snug text-slate-950 group-hover:text-primary-700">{game.title}</h3>
-        <Badge variant={game.metrics.intensity_level.includes('高') ? 'destructive' : 'secondary'} className="h-6 shrink-0 rounded-md">
-          {game.metrics.intensity_level}
-        </Badge>
+      <button type="button" onClick={onClick} className="flex min-h-0 flex-1 flex-col text-left">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="line-clamp-2 text-[15px] font-black leading-snug text-slate-950 group-hover:text-primary-700">{game.title}</h3>
+          <Badge variant={game.metrics.intensity_level.includes('高') ? 'destructive' : 'secondary'} className="h-6 shrink-0 rounded-md">
+            {game.metrics.intensity_level}
+          </Badge>
+        </div>
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">{game.brief_description || '暂无简介'}</p>
+        <div className="mt-3 flex items-center gap-3 text-xs font-bold text-slate-500">
+          <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5 text-primary-600" />{durationLabel}</span>
+          <span className="flex items-center gap-1"><Gauge className="h-3.5 w-3.5 text-amber-600" />{game.metrics.heart_rate_zone}</span>
+        </div>
+        <div className="mt-auto flex items-end justify-between gap-2 pt-3">
+          <TagList items={game.tags.targets.slice(0, 2)} tone={isAiGenerated ? 'amber' : 'teal'} />
+          <div className="flex shrink-0 items-center gap-1">
+            {source === 'ai' && <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-1 text-[11px] font-bold text-amber-700">AI</span>}
+            {isCustom && <span className="rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-1 text-[11px] font-bold text-emerald-700">自建</span>}
+            {!isCustom && source !== 'ai' && <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-1 text-[11px] font-bold text-slate-500">内置</span>}
+          </div>
+        </div>
+      </button>
+      {onAction && actionLabel && (
+        <div className="mt-2 flex justify-end border-t border-slate-100 pt-2">
+          <button
+            type="button"
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-md border bg-white px-2 text-[11px] font-semibold transition',
+              actionTone === 'rose'
+                ? 'border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-700'
+                : 'border-slate-200 text-red-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+            )}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAction();
+            }}
+          >
+            {actionIcon}
+            {actionLabel}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompactGameRow({
+  game,
+  source: sourceProp,
+  onClick,
+  actionLabel,
+  actionIcon,
+  actionTone = 'danger',
+  onAction,
+}: {
+  game: GameItem;
+  source: GameSource;
+  onClick: () => void;
+  actionLabel?: string;
+  actionIcon?: ReactNode;
+  actionTone?: 'danger' | 'rose';
+  onAction?: () => void;
+}) {
+  const origin = getGameOrigin(game);
+  const isCustom = origin === 'custom';
+  const isAiGenerated = origin === 'ai';
+  const source = isAiGenerated ? 'ai' : sourceProp;
+  const durationLabel = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} 分钟` : '-';
+  const targetLabel = game.tags.targets.slice(0, 2).join(' / ') || '-';
+  const placeLabel = game.tags.space_type[0] || '-';
+  const groupLabel = game.tags.group_size[0] || '-';
+  const sourceLabel = source === 'ai' ? 'AI' : isCustom ? '自建' : '内置';
+
+  return (
+    <div className="grid grid-cols-[minmax(180px,1.8fr)_minmax(120px,1fr)_minmax(120px,0.9fr)_64px_70px_80px] items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm transition-colors hover:bg-slate-50">
+      <button type="button" onClick={onClick} className="min-w-0 text-left">
+        <div className="truncate text-[15px] font-black text-slate-900">{game.title}</div>
+        <div className="mt-1 truncate text-xs leading-5 text-slate-500">{game.brief_description || '暂无简介'}</div>
+      </button>
+      <div className="min-w-0 truncate text-xs font-semibold text-primary-700">{targetLabel}</div>
+      <div className="min-w-0 text-xs leading-5 text-slate-600">
+        <div className="truncate">{placeLabel}</div>
+        <div className="truncate text-slate-400">{groupLabel}</div>
       </div>
-      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-500">{game.brief_description || '暂无简介'}</p>
-      <div className="mt-3 flex items-center gap-3 text-xs font-bold text-slate-500">
-        <span className="flex items-center gap-1"><Clock3 className="h-3.5 w-3.5 text-primary-600" />{durationLabel}</span>
-        <span className="flex items-center gap-1"><Gauge className="h-3.5 w-3.5 text-amber-600" />{game.metrics.heart_rate_zone}</span>
+      <div className="text-xs font-bold text-slate-600">{durationLabel}</div>
+      <Badge variant={game.metrics.intensity_level.includes('高') ? 'destructive' : 'secondary'} className="h-6 w-fit rounded-md">
+        {game.metrics.intensity_level}
+      </Badge>
+      <div className="flex items-center justify-end gap-2">
+        <span className={cn(
+          'rounded-md border px-1.5 py-1 text-[11px] font-bold',
+          source === 'ai'
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : isCustom
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-slate-200 bg-slate-50 text-slate-500'
+        )}>
+          {sourceLabel}
+        </span>
+        {onAction && actionLabel && (
+          <button
+            type="button"
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-md border bg-white px-2 text-[11px] font-semibold transition',
+              actionTone === 'rose'
+                ? 'border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-700'
+                : 'border-slate-200 text-red-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600'
+            )}
+            title={actionLabel}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAction();
+            }}
+          >
+            {actionIcon}
+          </button>
+        )}
       </div>
-      <div className="mt-auto flex items-end justify-between gap-2 pt-3">
-        <TagList items={game.tags.targets.slice(0, 2)} tone={source === 'ai' ? 'amber' : 'teal'} />
-        {source === 'ai' && <span className="rounded-md border border-amber-200 bg-amber-50 px-1.5 py-1 text-[11px] font-bold text-amber-700">AI</span>}
-        {isCustom && <span className="rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-1 text-[11px] font-bold text-emerald-700">自建</span>}
+    </div>
+  );
+}
+
+function DetailList({ items, tone = 'slate' }: { items: string[]; tone?: 'slate' | 'red' }) {
+  if (items.length === 0) return <EmptyHint />;
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div
+          key={`${item}-${index}`}
+          className={cn(
+            'flex gap-3 rounded-lg border px-3 py-2 text-sm leading-6',
+            tone === 'red'
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : 'border-slate-200 bg-slate-50 text-slate-700'
+          )}
+        >
+          <span className={cn(
+            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black',
+            tone === 'red' ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'
+          )}>
+            {index + 1}
+          </span>
+          <span>{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PaginatedGameDetail({
+  game,
+  source,
+  isFavorite,
+  saveMessage,
+  onCancelPreview,
+  onSaveAi,
+  onToggleFavorite,
+}: {
+  game?: GameItem;
+  source: GameSource;
+  isFavorite: boolean;
+  saveMessage?: string;
+  onCancelPreview: () => void;
+  onSaveAi: () => void;
+  onToggleFavorite: () => void;
+}) {
+  const detailRef = useRef<HTMLDivElement>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [game?.id]);
+
+  if (!game) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-slate-400">
+        <LayoutGrid className="mb-3 h-12 w-12 opacity-30" />
+        <p className="text-sm font-semibold">请选择一个游戏查看详情</p>
       </div>
-    </button>
+    );
+  }
+
+  const origin = getGameOrigin(game);
+  const isCustom = origin === 'custom';
+  const isAiGenerated = origin === 'ai';
+  const durationDisplay = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} 分钟` : '-';
+
+  const pages = [
+    {
+      title: '概览',
+      content: (
+        <div className="space-y-4">
+          <p className="rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-700">{game.brief_description || '暂无简介'}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="text-[11px] font-bold text-slate-400">时长</div>
+              <div className="mt-1 text-lg font-black text-slate-900">{durationDisplay}</div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="text-[11px] font-bold text-slate-400">强度</div>
+              <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.intensity_level}</div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="text-[11px] font-bold text-slate-400">心率区间</div>
+              <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.heart_rate_zone}</div>
+            </div>
+          </div>
+          <InfoBlock title="核心标签" className="!p-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TagList items={game.tags.targets} tone="teal" />
+              <TagList items={game.tags.space_type} />
+              <TagList items={game.tags.group_size} tone="amber" />
+              <TagList items={[game.tags.equipment_level, ...game.tags.age_groups]} />
+            </div>
+          </InfoBlock>
+        </div>
+      ),
+    },
+    {
+      title: '玩法步骤',
+      content: (
+        <div className="space-y-4">
+          <InfoBlock title="组织策略">
+            <p className="text-sm leading-6 text-slate-700">{game.execution.organization_strategy || <EmptyHint />}</p>
+          </InfoBlock>
+          <InfoBlock title="规则步骤">
+            <DetailList items={game.execution.rules_steps} />
+          </InfoBlock>
+        </div>
+      ),
+    },
+    {
+      title: '场地器材',
+      content: (
+        <div className="grid gap-4 lg:grid-cols-[6fr_4fr]">
+          <InfoBlock title="场地布置">
+            <p className="text-sm leading-6 text-slate-700">{game.setup.layout_instructions || <EmptyHint />}</p>
+          </InfoBlock>
+          <InfoBlock title="器材清单">
+            <DetailList items={game.setup.equipment_list} />
+          </InfoBlock>
+        </div>
+      ),
+    },
+    {
+      title: '安全提示',
+      content: (
+        <section className="rounded-lg border-2 border-red-300 bg-red-50 p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 text-red-700">
+            <AlertTriangle className="h-5 w-5" />
+            <h3 className="text-sm font-black">安全提示</h3>
+          </div>
+          <DetailList items={game.execution.safety_warnings} tone="red" />
+        </section>
+      ),
+    },
+    {
+      title: '教学调整',
+      content: (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <InfoBlock title="提高难度">
+            <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.progression_harder || <EmptyHint />}</p>
+          </InfoBlock>
+          <InfoBlock title="降低难度">
+            <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.regression_easier || <EmptyHint />}</p>
+          </InfoBlock>
+        </div>
+      ),
+    },
+  ];
+
+  const currentPage = pages[pageIndex];
+  const canPrev = pageIndex > 0;
+  const canNext = pageIndex < pages.length - 1;
+
+  const handleScreenshot = async () => {
+    if (!detailRef.current || isCapturing) return;
+    setIsCapturing(true);
+    try {
+      if (window.desktopCapture?.saveElementScreenshot) {
+        const rect = detailRef.current.getBoundingClientRect();
+        await window.desktopCapture.saveElementScreenshot({
+          filename: `${game.title}.png`,
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        });
+        return;
+      }
+
+      const canvas = await html2canvas(detailRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas 转 Blob 失败')), 'image/png');
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${game.title}.png`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') console.error('截图保存失败:', error);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  return (
+    <div ref={detailRef} className="flex h-full min-h-0 flex-col bg-white p-5">
+      {saveMessage && <div className="mb-3 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{saveMessage}</div>}
+      <div className="shrink-0 border-b border-slate-200 pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-[260px] flex-1">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <h2 className="text-2xl font-black leading-tight text-slate-950">{game.title}</h2>
+              {isAiGenerated && <Badge className="rounded-md bg-amber-500 text-white">AI 生成</Badge>}
+              {isCustom && <Badge className="rounded-md bg-emerald-600 text-white">自建</Badge>}
+            </div>
+            <p className="line-clamp-2 text-sm leading-6 text-slate-600">{game.brief_description || <EmptyHint />}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={onCancelPreview} className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100">
+              <X className="h-3.5 w-3.5" />
+              返回列表
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleFavorite}
+              className={cn(
+                'h-7 gap-1 rounded-md px-2 text-xs font-bold',
+                isFavorite
+                  ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                  : 'border-slate-300 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600'
+              )}
+            >
+              <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
+              {isFavorite ? '已收藏' : '收藏'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleScreenshot} disabled={isCapturing} className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100">
+              <Download className="h-3.5 w-3.5" />
+              {isCapturing ? '截图中...' : '截图'}
+            </Button>
+            <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="shrink-0 border-b border-slate-100 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            {pages.map((page, index) => (
+              <button
+                key={page.title}
+                type="button"
+                onClick={() => setPageIndex(index)}
+                className={cn(
+                  'h-8 rounded-md border px-3 text-xs font-black transition-colors',
+                  index === pageIndex
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                )}
+              >
+                {index + 1}. {page.title}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs font-bold text-slate-400">{pageIndex + 1} / {pages.length}</div>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden py-4">
+        <div className="h-full overflow-y-auto pr-1 custom-scrollbar">
+          <h3 className="mb-3 text-lg font-black text-slate-900">{currentPage.title}</h3>
+          {currentPage.content}
+        </div>
+      </div>
+
+      <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 pt-3">
+        <Button variant="outline" onClick={() => setPageIndex((current) => Math.max(0, current - 1))} disabled={!canPrev} className="h-9 rounded-lg border-slate-200 text-xs font-black">
+          <ChevronLeft className="h-4 w-4" />
+          上一页
+        </Button>
+        {source === 'ai' && (
+          <Button onClick={onSaveAi} className="h-9 rounded-lg bg-amber-500 px-4 text-xs font-black text-white hover:bg-amber-600">
+            <Star className="h-4 w-4 fill-white" />
+            查看我的游戏库记录
+          </Button>
+        )}
+        <Button variant="outline" onClick={() => setPageIndex((current) => Math.min(pages.length - 1, current + 1))} disabled={!canNext} className="h-9 rounded-lg border-slate-200 text-xs font-black">
+          下一页
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -390,7 +868,428 @@ function EmptyHint({ text = '（未填写）' }: { text?: string }) {
   return <p className="text-sm italic text-slate-400">{text}</p>;
 }
 
-function GameDetail({ game, source, onSaveAi }: { game?: GameItem; source: GameSource; onSaveAi: () => void }) {
+function SidebarNavButton({
+  active,
+  icon,
+  label,
+  count,
+  tone = 'primary',
+  onClick,
+}: {
+  active: boolean;
+  icon: ReactNode;
+  label: string;
+  count?: number;
+  tone?: 'primary' | 'amber' | 'rose';
+  onClick: () => void;
+}) {
+  const activeClass = {
+    primary: 'border-primary-200 bg-primary-50 text-primary-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700',
+    rose: 'border-rose-200 bg-rose-50 text-rose-700',
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left shadow-sm transition',
+        active ? activeClass : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2 text-sm font-black">
+        {icon}
+        <span className="truncate">{label}</span>
+      </span>
+      {typeof count === 'number' && (
+        <span className="ml-2 shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function LibrarySearchControls({
+  searchTerm,
+  selectedTargets,
+  selectedSpaces,
+  selectedGroups,
+  filterOptions,
+  activeFilterCount,
+  compact = false,
+  onSearchTermChange,
+  onSelectedTargetsChange,
+  onSelectedSpacesChange,
+  onSelectedGroupsChange,
+  onResetFilters,
+  onCreateGame,
+}: {
+  searchTerm: string;
+  selectedTargets: string[];
+  selectedSpaces: string[];
+  selectedGroups: string[];
+  filterOptions: {
+    targets: string[];
+    space_type: string[];
+    group_size: string[];
+  };
+  activeFilterCount: number;
+  compact?: boolean;
+  onSearchTermChange: (value: string) => void;
+  onSelectedTargetsChange: (value: string[]) => void;
+  onSelectedSpacesChange: (value: string[]) => void;
+  onSelectedGroupsChange: (value: string[]) => void;
+  onResetFilters: () => void;
+  onCreateGame: (game: GameItem) => void;
+}) {
+  if (compact) {
+    return (
+      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Input value={searchTerm} onChange={(event) => onSearchTermChange(event.target.value)} placeholder="搜索名称、描述、目标或场地..." className="h-9 rounded-lg border-slate-200 bg-white pl-8 text-xs" />
+        </div>
+        <FilterDropdown label="目标筛选" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
+        <FilterDropdown label="场地筛选" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
+        <FilterDropdown label="人数筛选" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={onResetFilters} className="h-9 px-3 text-slate-500 hover:text-rose-600">
+            <X className="h-4 w-4" />
+            重置
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-black text-slate-800">
+          <Search className="h-4 w-4 text-primary-500" />
+          游戏库搜索
+        </h3>
+        {activeFilterCount > 0 && (
+          <Button variant="ghost" size="sm" onClick={onResetFilters} className="h-7 px-2 text-xs text-slate-500 hover:text-rose-600">
+            <X className="h-3.5 w-3.5" />
+            重置
+          </Button>
+        )}
+      </div>
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <Input value={searchTerm} onChange={(event) => onSearchTermChange(event.target.value)} placeholder="搜索名称、描述、目标或场地..." className="h-9 rounded-lg border-slate-200 bg-slate-50 pl-8 text-xs focus-visible:bg-white" />
+        </div>
+        <div className="grid gap-2">
+          <FilterDropdown label="目标筛选" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
+          <FilterDropdown label="场地筛选" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
+          <FilterDropdown label="人数筛选" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
+        </div>
+        <CreateGameDialog onCreate={onCreateGame} />
+      </div>
+    </div>
+  );
+}
+
+function AiGeneratePanel({
+  activeProvider,
+  activeProviderId,
+  aiForm,
+  generationError,
+  hasGeneratedGames,
+  onAiFormChange,
+  onGenerate,
+  onViewResults,
+}: {
+  activeProvider?: { name?: string; model?: string; apiKey?: string };
+  activeProviderId: string;
+  aiForm: AiFormState;
+  generationError: string;
+  hasGeneratedGames: boolean;
+  onAiFormChange: (next: AiFormState) => void;
+  onGenerate: () => void;
+  onViewResults?: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col bg-white">
+      <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+          <Sparkles className="h-5 w-5 text-amber-500" />
+          AI生成游戏
+        </h2>
+        <p className="mt-1 text-xs text-slate-500">在右侧大区域设置生成条件，生成完成后会自动记录到我的游戏库</p>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="mx-auto max-w-5xl rounded-xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <span className="min-w-0 truncate font-bold">当前 API：{activeProvider?.name || '未选择'} / {activeProvider?.model || '未设置模型'}</span>
+            <span className={cn('shrink-0 font-bold', activeProviderId === 'gemini' || activeProvider?.apiKey ? 'text-emerald-600' : 'text-red-600')}>
+              {activeProviderId === 'gemini' || activeProvider?.apiKey ? '已读取配置' : '缺少 API Key'}
+            </span>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectField label="人数" value={aiForm.groupSize} options={selectOptions.groupSize} onChange={(value) => onAiFormChange({ ...aiForm, groupSize: value })} />
+            <SelectField label="场地" value={aiForm.spaceType} options={selectOptions.spaceType} onChange={(value) => onAiFormChange({ ...aiForm, spaceType: value })} />
+            <SelectField label="器材情况" value={aiForm.equipment} options={selectOptions.equipment} onChange={(value) => onAiFormChange({ ...aiForm, equipment: value })} />
+            <SelectField label="主要训练目标" value={aiForm.target} options={selectOptions.target} onChange={(value) => onAiFormChange({ ...aiForm, target: value })} />
+            <label className="block md:col-span-2">
+              <span className="mb-1.5 block text-xs font-black text-slate-600">特殊情境补充说明</span>
+              <Textarea value={aiForm.context} onChange={(event) => onAiFormChange({ ...aiForm, context: event.target.value })} placeholder="例如：雨后地面较滑、班级注意力容易分散、需要低器材高密度..." className="min-h-28 resize-none border-slate-200 bg-white" />
+            </label>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button onClick={onGenerate} className="h-10 rounded-lg bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800">
+              <Sparkles className="h-4 w-4" />
+              调用 AI 生成游戏
+            </Button>
+            {hasGeneratedGames && (
+              <Button onClick={onGenerate} variant="outline" className="h-10 rounded-lg border-amber-200 bg-white text-sm font-black text-amber-700 hover:bg-amber-50">
+                <RefreshCcw className="h-4 w-4" />
+                重新生成
+              </Button>
+            )}
+            {hasGeneratedGames && onViewResults && (
+              <Button onClick={onViewResults} variant="outline" className="h-10 rounded-lg border-slate-200 bg-white text-sm font-black text-slate-700 hover:bg-slate-50">
+                <LayoutGrid className="h-4 w-4" />
+                鏌ョ湅鏈€杩戠敓鎴愮粨鏋?
+              </Button>
+            )}
+          </div>
+
+          {generationError && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold leading-6 text-red-700">
+              {generationError}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GameGridPanel({
+  title,
+  description,
+  icon,
+  games,
+  source,
+  emptyIcon,
+  emptyTitle,
+  emptyDescription,
+  scrollTop,
+  headerControls,
+  getCardAction,
+  onScroll,
+  onSelectGame,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  games: GameItem[];
+  source: GameSource | ((game: GameItem) => GameSource);
+  emptyIcon: ReactNode;
+  emptyTitle: string;
+  emptyDescription?: string;
+  scrollTop: number;
+  headerControls?: ReactNode;
+  getCardAction?: (game: GameItem) => {
+    label: string;
+    icon: ReactNode;
+    tone?: 'danger' | 'rose';
+    onAction: () => void;
+  } | undefined;
+  onScroll: (scrollTop: number) => void;
+  onSelectGame: (game: GameItem) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastAppliedScrollTopRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    if (lastAppliedScrollTopRef.current === scrollTop) return;
+    element.scrollTop = scrollTop;
+    lastAppliedScrollTopRef.current = scrollTop;
+  }, [scrollTop, games.length]);
+
+  return (
+    <div className="flex h-full flex-col bg-white">
+      <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-[220px]">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+              {icon}
+              {title}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">{description}</p>
+          </div>
+          {headerControls}
+        </div>
+      </div>
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar"
+        onScroll={(event) => {
+          const nextScrollTop = event.currentTarget.scrollTop;
+          lastAppliedScrollTopRef.current = nextScrollTop;
+          onScroll(nextScrollTop);
+        }}
+      >
+        {games.length === 0 ? (
+          <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-3 text-center text-slate-400">
+            {emptyIcon}
+            <p className="text-sm font-semibold text-slate-500">{emptyTitle}</p>
+            {emptyDescription && <p className="text-xs text-slate-400">{emptyDescription}</p>}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="grid grid-cols-[minmax(180px,1.8fr)_minmax(120px,1fr)_minmax(120px,0.9fr)_64px_70px_80px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[11px] font-black uppercase tracking-wide text-slate-400">
+              <span>游戏</span>
+              <span>目标</span>
+              <span>场地 / 人数</span>
+              <span>时长</span>
+              <span>强度</span>
+              <span className="text-right">操作</span>
+            </div>
+            {games.map((game) => {
+              const cardSource = typeof source === 'function' ? source(game) : source;
+              const cardAction = getCardAction?.(game);
+              return (
+                <CompactGameRow
+                  key={game.id}
+                  game={game}
+                  source={cardSource}
+                  onClick={() => onSelectGame(game)}
+                  actionLabel={cardAction?.label}
+                  actionIcon={cardAction?.icon}
+                  actionTone={cardAction?.tone}
+                  onAction={cardAction?.onAction}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AiLandingPanel({
+  games,
+  selectedGame,
+  selectedSource,
+  isGenerating,
+  saveMessage,
+  isFavorite,
+  onSelectGame,
+  onCancelPreview,
+  onSaveAi,
+  onToggleFavorite,
+  renderForm,
+  onOpenForm,
+  onViewResults,
+}: {
+  games: GameItem[];
+  selectedGame?: GameItem;
+  selectedSource: GameSource;
+  isGenerating: boolean;
+  saveMessage: string;
+  isFavorite: boolean;
+  onSelectGame: (game: GameItem) => void;
+  onCancelPreview: () => void;
+  onSaveAi: () => void;
+  onToggleFavorite: () => void;
+  renderForm: () => ReactNode;
+  onOpenForm: () => void;
+  onViewResults: () => void;
+}) {
+  if (isGenerating) {
+    return (
+      <div className="flex h-full flex-col bg-white">
+        <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            AI生成游戏
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">正在生成新的课堂游戏方案</p>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="flex h-full min-h-[420px] flex-col items-center justify-center gap-4 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500 ring-1 ring-amber-100">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+            <div>
+              <p className="text-base font-black text-slate-700">正在制作中</p>
+              <p className="mt-1 text-sm text-slate-400">AI 正在整理游戏规则、场地布置和安全提示</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedGame && selectedSource === 'ai') {
+    return (
+      <PaginatedGameDetail
+        game={selectedGame}
+        source="ai"
+        isFavorite={isFavorite}
+        saveMessage={saveMessage}
+        onCancelPreview={onCancelPreview}
+        onSaveAi={onSaveAi}
+        onToggleFavorite={onToggleFavorite}
+      />
+    );
+  }
+
+  if (games.length === 0) {
+    return <>{renderForm()}</>;
+  }
+
+  return (
+    <GameGridPanel
+      title="AI生成游戏"
+      description={`最近生成 ${games.length} 个游戏，点击卡片进入详情页`}
+      icon={<Sparkles className="h-5 w-5 text-amber-500" />}
+      games={games}
+      source="ai"
+      emptyIcon={<Sparkles className="h-12 w-12 text-amber-300" />}
+      emptyTitle="填写条件后生成课堂游戏"
+      emptyDescription="生成后点击任意游戏卡片即可进入详情页"
+      scrollTop={0}
+      headerControls={
+        <Button onClick={onOpenForm} variant="outline" className="h-9 rounded-lg border-amber-200 bg-amber-50 text-xs font-black text-amber-700 hover:bg-amber-100">
+          <Sparkles className="h-4 w-4" />
+          重新设置生成
+        </Button>
+      }
+      onScroll={() => undefined}
+      onSelectGame={onSelectGame}
+    />
+  );
+}
+
+function GameDetail({
+  game,
+  source,
+  isFavorite,
+  onCancelPreview,
+  onSaveAi,
+  onToggleFavorite,
+}: {
+  game?: GameItem;
+  source: GameSource;
+  isFavorite: boolean;
+  onCancelPreview: () => void;
+  onSaveAi: () => void;
+  onToggleFavorite: () => void;
+}) {
   const detailRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
@@ -403,7 +1302,10 @@ function GameDetail({ game, source, onSaveAi }: { game?: GameItem; source: GameS
     );
   }
 
-  const isCustom = game.id.startsWith('custom_');
+  const origin = getGameOrigin(game);
+  const isCustom = origin === 'custom';
+  const isAiGenerated = origin === 'ai';
+  const isBuiltIn = origin === 'seed';
   const durationDisplay = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} min` : '—';
 
   const handleScreenshot = async () => {
@@ -476,18 +1378,43 @@ function GameDetail({ game, source, onSaveAi }: { game?: GameItem; source: GameS
   };
 
   return (
-    <div ref={detailRef} className="space-y-4 pb-20">
+    <div ref={detailRef} className="space-y-4 pb-20 [transform:translateZ(0)]">
       <div className="border-b border-slate-200 pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-[260px] flex-1">
             <div className="mb-2 flex items-center gap-2">
               <h2 className="text-2xl font-black leading-tight text-slate-950">{game.title}</h2>
-              {source === 'ai' && <Badge className="rounded-md bg-amber-500 text-white">AI 生成</Badge>}
+              {isAiGenerated && <Badge className="rounded-md bg-amber-500 text-white">AI 生成</Badge>}
               {isCustom && <Badge className="rounded-md bg-emerald-600 text-white">自建</Badge>}
             </div>
             <p className="text-sm leading-6 text-slate-600">{game.brief_description || <EmptyHint />}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCancelPreview}
+              className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+              title="取消预览"
+            >
+              <X className="h-3.5 w-3.5" />
+              取消预览
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToggleFavorite}
+              className={cn(
+                'h-7 gap-1 rounded-md px-2 text-xs font-bold',
+                isFavorite
+                  ? 'border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100'
+                  : 'border-slate-300 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600'
+              )}
+              title={isFavorite ? '取消收藏' : '收藏'}
+            >
+              <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
+              {isFavorite ? '已收藏' : '收藏'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -551,10 +1478,10 @@ function GameDetail({ game, source, onSaveAi }: { game?: GameItem; source: GameS
       </div>
 
       {source === 'ai' && (
-        <div className="sticky bottom-0 -mx-5 border-t border-amber-200 bg-white/95 px-5 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="sticky bottom-0 -mx-5 border-t border-amber-200 bg-white px-5 py-3 shadow-[0_-2px_8px_rgba(15,23,42,0.06)]">
           <Button onClick={onSaveAi} className="h-10 w-full rounded-lg bg-amber-500 text-sm font-black text-white hover:bg-amber-600">
             <Star className="h-4 w-4 fill-white" />
-            加入游戏库
+            查看我的游戏库记录
           </Button>
         </div>
       )}
@@ -566,65 +1493,139 @@ export function GameLibraryWorkbench() {
   const { generate } = useAIProvider();
   const { providers, activeProviderId } = useAppStore();
   const activeProvider = providers[activeProviderId];
+  const [storedViewState] = useState(() => readStoredWorkbenchViewState());
+  const hiddenSeedGameIdsRef = useRef<string[]>([]);
   const [libraryGames, setLibraryGames] = useState<GameItem[]>(librarySeed);
-  const [activeTab, setActiveTab] = useState<TabMode>('library');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
-  const [selectedSpaces, setSelectedSpaces] = useState<string[]>([]);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [favoriteGames, setFavoriteGames] = useState<GameItem[]>([]);
+  const [activeTab, setActiveTab] = useState<TabMode>(storedViewState.activeTab);
+  const [libraryView, setLibraryView] = useState<GameListViewState>(storedViewState.library);
+  const [favoritesView, setFavoritesView] = useState<GameListViewState>(storedViewState.favorites);
   const selectedGameId = useAppStore((s) => s.selectedGameId);
   const selectedSource = useAppStore((s) => s.selectedGameSource) as GameSource;
   const setSelectedGameId = useAppStore((s) => s.setSelectedGameId);
   const setSelectedGameSource = useAppStore((s) => s.setSelectedGameSource);
   const [aiForm, setAiForm] = useState<AiFormState>({ groupSize: '', spaceType: '', equipment: '', target: '', context: '' });
   const [aiGames, setAiGames] = useState<GameItem[]>([]);
+  const [aiViewMode, setAiViewMode] = useState<AiViewMode>('form');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationRound, setGenerationRound] = useState(1);
   const [generationError, setGenerationError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
-  const filterOptions = useMemo(() => ({
+  const libraryFilterOptions = useMemo(() => ({
     targets: uniqueValues('targets', libraryGames),
     space_type: uniqueValues('space_type', libraryGames),
     group_size: uniqueValues('group_size', libraryGames),
   }), [libraryGames]);
 
-  const filteredGames = useMemo(() => {
-    const keyword = searchTerm.trim().toLowerCase();
+  const favoriteFilterOptions = useMemo(() => ({
+    targets: uniqueValues('targets', favoriteGames),
+    space_type: uniqueValues('space_type', favoriteGames),
+    group_size: uniqueValues('group_size', favoriteGames),
+  }), [favoriteGames]);
+
+  const filteredLibraryGames = useMemo(() => {
+    const keyword = libraryView.searchTerm.trim().toLowerCase();
     return libraryGames.filter((game) => {
       const searchable = [game.title, game.brief_description, game.tags.targets.join(' '), game.tags.space_type.join(' '), game.tags.group_size.join(' '), game.tags.age_groups.join(' ')].join(' ').toLowerCase();
-      return (!keyword || searchable.includes(keyword)) && hasEverySelected(game.tags.targets, selectedTargets) && hasEverySelected(game.tags.space_type, selectedSpaces) && hasEverySelected(game.tags.group_size, selectedGroups);
+      return (!keyword || searchable.includes(keyword)) && hasEverySelected(game.tags.targets, libraryView.selectedTargets) && hasEverySelected(game.tags.space_type, libraryView.selectedSpaces) && hasEverySelected(game.tags.group_size, libraryView.selectedGroups);
     });
-  }, [libraryGames, searchTerm, selectedGroups, selectedSpaces, selectedTargets]);
+  }, [libraryGames, libraryView.searchTerm, libraryView.selectedGroups, libraryView.selectedSpaces, libraryView.selectedTargets]);
+
+  const filteredFavoriteGames = useMemo(() => {
+    const keyword = favoritesView.searchTerm.trim().toLowerCase();
+    return favoriteGames.filter((game) => {
+      const searchable = [game.title, game.brief_description, game.tags.targets.join(' '), game.tags.space_type.join(' '), game.tags.group_size.join(' '), game.tags.age_groups.join(' ')].join(' ').toLowerCase();
+      return (!keyword || searchable.includes(keyword)) && hasEverySelected(game.tags.targets, favoritesView.selectedTargets) && hasEverySelected(game.tags.space_type, favoritesView.selectedSpaces) && hasEverySelected(game.tags.group_size, favoritesView.selectedGroups);
+    });
+  }, [favoriteGames, favoritesView.searchTerm, favoritesView.selectedGroups, favoritesView.selectedSpaces, favoritesView.selectedTargets]);
 
   const selectedGame = useMemo(() => {
-    const sourceList = selectedSource === 'ai' ? aiGames : libraryGames;
-    return sourceList.find((game) => game.id === selectedGameId) ?? (selectedSource === 'ai' ? aiGames[0] : filteredGames[0]) ?? libraryGames[0];
-  }, [aiGames, filteredGames, libraryGames, selectedGameId, selectedSource]);
+    if (!selectedGameId) return undefined;
+    const knownGames = [...aiGames, ...libraryGames, ...favoriteGames];
+    return knownGames.find((game) => game.id === selectedGameId);
+  }, [aiGames, favoriteGames, libraryGames, selectedGameId]);
 
-  const activeFilterCount = selectedTargets.length + selectedSpaces.length + selectedGroups.length + (searchTerm.trim() ? 1 : 0);
+  const libraryFilterCount = libraryView.selectedTargets.length + libraryView.selectedSpaces.length + libraryView.selectedGroups.length + (libraryView.searchTerm.trim() ? 1 : 0);
+  const favoriteFilterCount = favoritesView.selectedTargets.length + favoritesView.selectedSpaces.length + favoritesView.selectedGroups.length + (favoritesView.searchTerm.trim() ? 1 : 0);
+  const isSelectedFavorite = Boolean(selectedGame && favoriteGames.some((game) => game.id === selectedGame.id));
+  const isLibraryPreview = Boolean(activeTab === 'library' && selectedGame && libraryGames.some((game) => game.id === selectedGame.id));
+  const isFavoritesPreview = Boolean(activeTab === 'favorites' && selectedGame && favoriteGames.some((game) => game.id === selectedGame.id));
+
+  const resolveFavoriteSource = (game: GameItem): GameSource => game.id.startsWith('ai_') ? 'ai' : 'local';
+
+  useEffect(() => {
+    writeStoredWorkbenchViewState({
+      activeTab,
+      library: libraryView,
+      favorites: favoritesView,
+    });
+  }, [activeTab, favoritesView, libraryView]);
 
   useEffect(() => {
     let alive = true;
-    loadUserGamesFromStorage().then((userGames) => {
+    Promise.all([loadUserGamesFromStorage(), loadFavoriteGamesFromStorage(), loadHiddenSeedGameIdsFromStorage()]).then(([userGames, favorites, hiddenIds]) => {
       if (!alive) return;
-      if (userGames.length > 0) {
-        setLibraryGames(mergeLibraryWithUserGames(librarySeed, userGames));
-      }
+      hiddenSeedGameIdsRef.current = hiddenIds;
+      setLibraryGames(mergeLibraryWithUserGames(librarySeed, userGames, hiddenIds));
+      setFavoriteGames(favorites);
     });
     return () => {
       alive = false;
     };
   }, []);
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedTargets([]);
-    setSelectedSpaces([]);
-    setSelectedGroups([]);
+  const updateLibraryView = (patch: Partial<GameListViewState>) => {
+    setLibraryView((current) => ({ ...current, ...patch }));
+  };
+
+  const updateFavoritesView = (patch: Partial<GameListViewState>) => {
+    setFavoritesView((current) => ({ ...current, ...patch }));
+  };
+
+  const resetLibraryFilters = () => {
+    setLibraryView((current) => ({
+      ...current,
+      searchTerm: '',
+      selectedTargets: [],
+      selectedSpaces: [],
+      selectedGroups: [],
+      scrollTop: 0,
+    }));
+  };
+
+  const resetFavoriteFilters = () => {
+    setFavoritesView((current) => ({
+      ...current,
+      searchTerm: '',
+      selectedTargets: [],
+      selectedSpaces: [],
+      selectedGroups: [],
+      scrollTop: 0,
+    }));
+  };
+
+  const openTab = (tab: TabMode) => {
+    setActiveTab(tab);
+    setSaveMessage('');
+    if (tab === 'library') {
+      setSelectedGameId('');
+      setSelectedGameSource('local');
+    }
+    if (tab === 'favorites') {
+      setSelectedGameId('');
+      setSelectedGameSource('local');
+    }
+    if (tab === 'ai') {
+      setSelectedGameId('');
+      setSelectedGameSource('ai');
+      setAiViewMode(aiGames.length > 0 ? 'result' : 'form');
+    }
   };
 
   const handleGenerate = async () => {
+    setActiveTab('ai');
+    setAiViewMode('result');
     setIsGenerating(true);
     setGenerationError('');
     setSaveMessage('');
@@ -654,6 +1655,9 @@ export function GameLibraryWorkbench() {
       }
 
       const generatedGames = extractJsonArray(text);
+      if (generatedGames.length !== 4) {
+        throw new Error(`AI 返回了 ${generatedGames.length} 个游戏，结果页要求固定展示 4 个，请重新生成。`);
+      }
       const nextRound = generationRound + 1;
       const nextGames = generatedGames.map((game, index) => ({
         ...game,
@@ -661,8 +1665,15 @@ export function GameLibraryWorkbench() {
       }));
       setGenerationRound(nextRound);
       setAiGames(nextGames);
-      setSelectedGameId(nextGames[0].id);
+      setLibraryGames((current) => {
+        const existingIds = new Set(current.map((game) => game.id));
+        const merged = [...nextGames.filter((game) => !existingIds.has(game.id)), ...current];
+        void persistUserGames(merged, seedIds);
+        return merged;
+      });
+      setSelectedGameId('');
       setSelectedGameSource('ai');
+      setAiViewMode('result');
     } catch (error: any) {
       setGenerationError(error?.message || 'AI 生成失败，请检查 API 设置后重试。');
     } finally {
@@ -672,6 +1683,12 @@ export function GameLibraryWorkbench() {
 
   const saveAiGame = () => {
     if (!selectedGame || selectedSource !== 'ai') return;
+    if (libraryGames.some((game) => game.id === selectedGame.id)) {
+      setActiveTab('library');
+      setSaveMessage('这个 AI 游戏已经自动记录在我的游戏库。');
+      window.setTimeout(() => setSaveMessage(''), 3600);
+      return;
+    }
     const savedGame = { ...selectedGame, id: `saved_${Date.now()}` };
     setLibraryGames((current) => {
       const next = [savedGame, ...current];
@@ -698,104 +1715,265 @@ export function GameLibraryWorkbench() {
     window.setTimeout(() => setSaveMessage(''), 3600);
   };
 
+  const deleteLibraryGame = (game: GameItem) => {
+    const isSeedGame = seedIds.has(game.id);
+    if (isSeedGame && !window.confirm(`"${game.title}"是内置游戏。删除后会从我的游戏库隐藏，并同步移出收藏库。是否继续？`)) return;
+    if (!isSeedGame && !window.confirm(`确定要删除游戏"${game.title}"吗？此操作会同步移出收藏库。`)) return;
+    if (isSeedGame) {
+      const nextHiddenIds = Array.from(new Set([...hiddenSeedGameIdsRef.current, game.id]));
+      hiddenSeedGameIdsRef.current = nextHiddenIds;
+      void persistHiddenSeedGameIds(nextHiddenIds);
+    }
+    setLibraryGames((current) => {
+      const next = current.filter((item) => item.id !== game.id);
+      void persistUserGames(next, seedIds);
+      return next;
+    });
+    setFavoriteGames((current) => {
+      const next = current.filter((item) => item.id !== game.id);
+      if (next.length !== current.length) {
+        void persistFavoriteGames(next);
+      }
+      return next;
+    });
+    setAiGames((current) => current.filter((item) => item.id !== game.id));
+    if (selectedGameId === game.id) {
+      setSelectedGameId('');
+    }
+    setSaveMessage('游戏已删除。');
+    window.setTimeout(() => setSaveMessage(''), 2400);
+  };
+
+  const unfavoriteGame = (game: GameItem) => {
+    setFavoriteGames((current) => {
+      const next = current.filter((item) => item.id !== game.id);
+      void persistFavoriteGames(next);
+      return next;
+    });
+    if (activeTab === 'favorites' && selectedGameId === game.id) {
+      setSelectedGameId('');
+    }
+    setSaveMessage('已取消收藏。');
+    window.setTimeout(() => setSaveMessage(''), 2400);
+  };
+
   const pickGame = (game: GameItem, source: GameSource) => {
     setSelectedGameId(game.id);
     setSelectedGameSource(source);
     setSaveMessage('');
   };
 
+  const handleCancelPreview = () => {
+    setSelectedGameId('');
+    setSaveMessage('');
+  };
+
+  const toggleSelectedFavorite = () => {
+    if (!selectedGame) return;
+    const wasFavorite = isSelectedFavorite;
+    setFavoriteGames((current) => {
+      const exists = current.some((game) => game.id === selectedGame.id);
+      const next = exists ? current.filter((game) => game.id !== selectedGame.id) : [selectedGame, ...current];
+      void persistFavoriteGames(next);
+      return next;
+    });
+    if (wasFavorite && activeTab === 'favorites') {
+      setSelectedGameId('');
+    }
+    setSaveMessage(wasFavorite ? '已取消收藏。' : '已加入游戏收藏库。');
+    window.setTimeout(() => setSaveMessage(''), 2400);
+  };
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-100 text-slate-900">
-
-      <div className="grid min-h-0 flex-1 overflow-hidden grid-cols-[40fr_60fr]">
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r border-slate-200 bg-slate-50">
-          <div className="shrink-0 border-b border-slate-200 bg-white p-4">
-            <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
-              <button onClick={() => setActiveTab('library')} className={cn('h-9 rounded-md text-sm font-black transition-all', activeTab === 'library' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800')}>📚 我的游戏库</button>
-              <button onClick={() => setActiveTab('ai')} className={cn('h-9 rounded-md text-sm font-black transition-all', activeTab === 'ai' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800')}>✨ AI 灵感引擎</button>
-            </div>
-
-            {activeTab === 'library' ? (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="relative min-w-[260px] flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <Input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="搜索游戏名称、描述、目标或场地..." className="h-9 rounded-lg border-slate-200 bg-slate-50 pl-9 text-sm focus-visible:bg-white" />
-                </div>
-                <FilterDropdown label="目标筛选" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={setSelectedTargets} />
-                <FilterDropdown label="场地筛选" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={setSelectedSpaces} />
-                <FilterDropdown label="人数筛选" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={setSelectedGroups} />
-                {activeFilterCount > 0 && <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 px-3 text-slate-500 hover:text-rose-600"><X className="h-4 w-4" />重置</Button>}
-                <CreateGameDialog onCreate={handleCreateGame} />
-              </div>
-            ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="col-span-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  <span className="font-bold">当前 API：{activeProvider?.name || '未选择'} / {activeProvider?.model || '未设置模型'}</span>
-                  <span className={cn('font-bold', activeProviderId === 'gemini' || activeProvider?.apiKey ? 'text-emerald-600' : 'text-red-600')}>
-                    {activeProviderId === 'gemini' || activeProvider?.apiKey ? '已读取配置' : '缺少 API Key'}
-                  </span>
-                </div>
-                <SelectField label="人数" value={aiForm.groupSize} options={selectOptions.groupSize} onChange={(value) => setAiForm((current) => ({ ...current, groupSize: value }))} />
-                <SelectField label="场地" value={aiForm.spaceType} options={selectOptions.spaceType} onChange={(value) => setAiForm((current) => ({ ...current, spaceType: value }))} />
-                <SelectField label="器材情况" value={aiForm.equipment} options={selectOptions.equipment} onChange={(value) => setAiForm((current) => ({ ...current, equipment: value }))} />
-                <SelectField label="主要训练目标" value={aiForm.target} options={selectOptions.target} onChange={(value) => setAiForm((current) => ({ ...current, target: value }))} />
-                <label className="col-span-2 block">
-                  <span className="mb-1.5 block text-xs font-black text-slate-600">特殊情境补充说明</span>
-                  <Textarea value={aiForm.context} onChange={(event) => setAiForm((current) => ({ ...current, context: event.target.value }))} placeholder="例如：雨后地面较滑、班级注意力容易分散、需要低器材高密度..." className="min-h-20 resize-none border-slate-200 bg-white" />
-                </label>
-                <Button onClick={handleGenerate} disabled={isGenerating} className="col-span-2 h-10 rounded-lg bg-slate-900 text-sm font-black text-white hover:bg-slate-800">
-                  {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  🚀 调用 AI 生成游戏
-                </Button>
-                {generationError && (
-                  <div className="col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold leading-6 text-red-700">
-                    {generationError}
-                  </div>
-                )}
-                {aiGames.length > 0 && !isGenerating && (
-                  <Button onClick={handleGenerate} variant="outline" className="col-span-2 h-9 rounded-lg border-amber-200 bg-amber-50 text-sm font-black text-amber-700 hover:bg-amber-100">
-                    <RefreshCcw className="h-4 w-4" />
-                    不满意，重新生成
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 custom-scrollbar">
-            {activeTab === 'library' ? (
-              filteredGames.length === 0 ? (
-                <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-slate-400">
-                  <Search className="mb-3 h-10 w-10 opacity-40" />
-                  <p className="text-sm font-semibold">没有匹配的体育游戏</p>
-                  <button className="mt-2 text-xs font-bold text-primary-600 hover:underline" onClick={resetFilters}>清空筛选条件</button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
-                  {filteredGames.map((game) => <GameCard key={game.id} game={game} source="local" active={selectedSource === 'local' && game.id === selectedGame?.id} onClick={() => pickGame(game, 'local')} />)}
-                </div>
-              )
-            ) : isGenerating ? (
-              <SkeletonResults />
-            ) : aiGames.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 2xl:grid-cols-3">
-                {aiGames.map((game) => <GameCard key={game.id} game={game} source="ai" active={selectedSource === 'ai' && game.id === selectedGame?.id} onClick={() => pickGame(game, 'ai')} />)}
-              </div>
-            ) : (
-              <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-lg border border-dashed border-amber-200 bg-white text-center text-slate-400">
-                <Sparkles className="mb-3 h-12 w-12 text-amber-300" />
-                <p className="text-sm font-bold text-slate-500">填写条件后生成 4 个课堂游戏灵感</p>
-                <p className="mt-1 text-xs text-slate-400">生成结果会出现在这里，点击任意卡片可在右侧查看详情。</p>
-              </div>
-            )}
-          </div>
+    <div className="flex h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm">
+      <aside className="min-h-0 w-[25%] shrink-0 overflow-hidden border-r border-slate-200 bg-white">
+        <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar">
+          <SidebarNavButton
+            active={activeTab === 'ai'}
+            icon={<Sparkles className="h-4 w-4 shrink-0 text-amber-500" />}
+            label="AI生成游戏"
+            count={aiGames.length}
+            tone="amber"
+            onClick={() => openTab('ai')}
+          />
+          <SidebarNavButton
+            active={activeTab === 'library'}
+            icon={<BookOpen className="h-4 w-4 shrink-0 text-primary-500" />}
+            label="我的游戏库"
+            count={libraryGames.length}
+            tone="primary"
+            onClick={() => openTab('library')}
+          />
+          <SidebarNavButton
+            active={activeTab === 'favorites'}
+            icon={<Heart className="h-4 w-4 shrink-0 text-rose-500" />}
+            label="游戏收藏库"
+            count={favoriteGames.length}
+            tone="rose"
+            onClick={() => openTab('favorites')}
+          />
         </div>
+      </aside>
 
-        <aside className="min-h-0 min-w-0 overflow-y-auto bg-white p-5 custom-scrollbar">
-          {saveMessage && <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{saveMessage}</div>}
-          <GameDetail game={selectedGame} source={selectedSource} onSaveAi={saveAiGame} />
-        </aside>
-      </div>
+      <main className="min-h-0 flex-1 overflow-hidden bg-white">
+        {activeTab === 'ai' && (
+          aiViewMode === 'form' && !isGenerating ? (
+            <AiGeneratePanel
+              activeProvider={activeProvider}
+              activeProviderId={activeProviderId}
+              aiForm={aiForm}
+              generationError={generationError}
+              hasGeneratedGames={aiGames.length > 0}
+              onAiFormChange={setAiForm}
+              onGenerate={handleGenerate}
+              onViewResults={aiGames.length > 0 ? () => {
+                setSelectedGameId('');
+                setSelectedGameSource('ai');
+                setAiViewMode('result');
+              } : undefined}
+            />
+          ) : (
+            <AiLandingPanel
+              games={aiGames}
+              selectedGame={selectedGame}
+              selectedSource={selectedSource}
+              isGenerating={isGenerating}
+              saveMessage={saveMessage}
+              isFavorite={isSelectedFavorite}
+              onSelectGame={(game) => pickGame(game, 'ai')}
+              onCancelPreview={handleCancelPreview}
+              onSaveAi={saveAiGame}
+              onToggleFavorite={toggleSelectedFavorite}
+              renderForm={() => (
+                <AiGeneratePanel
+                  activeProvider={activeProvider}
+                  activeProviderId={activeProviderId}
+                  aiForm={aiForm}
+                  generationError={generationError}
+                  hasGeneratedGames={aiGames.length > 0}
+                  onAiFormChange={setAiForm}
+                  onGenerate={handleGenerate}
+                  onViewResults={aiGames.length > 0 ? () => {
+                    setSelectedGameId('');
+                    setSelectedGameSource('ai');
+                    setAiViewMode('result');
+                  } : undefined}
+                />
+              )}
+              onOpenForm={() => {
+                setSelectedGameId('');
+                setAiViewMode('form');
+              }}
+              onViewResults={() => {
+                setSelectedGameId('');
+                setSelectedGameSource('ai');
+                setAiViewMode('result');
+              }}
+            />
+          )
+        )}
+
+        {activeTab === 'library' && (
+          isLibraryPreview && selectedGame ? (
+            <PaginatedGameDetail
+              game={selectedGame}
+              source={selectedSource}
+              isFavorite={isSelectedFavorite}
+              saveMessage={saveMessage}
+              onCancelPreview={handleCancelPreview}
+              onSaveAi={saveAiGame}
+              onToggleFavorite={toggleSelectedFavorite}
+            />
+          ) : (
+            <GameGridPanel
+              title="我的游戏库"
+              description={libraryView.searchTerm.trim() ? `搜索“${libraryView.searchTerm.trim()}”，找到 ${filteredLibraryGames.length} 个 / 共 ${libraryGames.length} 个` : `共 ${libraryGames.length} 个游戏，点击卡片进入详情页`}
+              icon={<BookOpen className="h-5 w-5 text-primary-500" />}
+              games={filteredLibraryGames}
+              source="local"
+              emptyIcon={<Search className="h-12 w-12 text-slate-200" />}
+              emptyTitle={libraryView.searchTerm.trim() || libraryFilterCount > 0 ? '没有匹配的体育游戏' : '暂无游戏数据'}
+              scrollTop={libraryView.scrollTop}
+              headerControls={
+                <LibrarySearchControls
+                  searchTerm={libraryView.searchTerm}
+                  selectedTargets={libraryView.selectedTargets}
+                  selectedSpaces={libraryView.selectedSpaces}
+                  selectedGroups={libraryView.selectedGroups}
+                  filterOptions={libraryFilterOptions}
+                  activeFilterCount={libraryFilterCount}
+                  compact
+                  onSearchTermChange={(searchTerm) => updateLibraryView({ searchTerm, scrollTop: 0 })}
+                  onSelectedTargetsChange={(selectedTargets) => updateLibraryView({ selectedTargets, scrollTop: 0 })}
+                  onSelectedSpacesChange={(selectedSpaces) => updateLibraryView({ selectedSpaces, scrollTop: 0 })}
+                  onSelectedGroupsChange={(selectedGroups) => updateLibraryView({ selectedGroups, scrollTop: 0 })}
+                  onResetFilters={resetLibraryFilters}
+                  onCreateGame={handleCreateGame}
+                />
+              }
+              getCardAction={(game) => ({
+                label: '删除',
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                tone: 'danger',
+                onAction: () => deleteLibraryGame(game),
+              })}
+              onScroll={(scrollTop) => updateLibraryView({ scrollTop })}
+              onSelectGame={(game) => pickGame(game, 'local')}
+            />
+          )
+        )}
+
+        {activeTab === 'favorites' && (
+          isFavoritesPreview && selectedGame ? (
+            <PaginatedGameDetail
+              game={selectedGame}
+              source={selectedSource}
+              isFavorite={isSelectedFavorite}
+              saveMessage={saveMessage}
+              onCancelPreview={handleCancelPreview}
+              onSaveAi={saveAiGame}
+              onToggleFavorite={toggleSelectedFavorite}
+            />
+          ) : (
+            <GameGridPanel
+              title="游戏收藏库"
+              description={favoritesView.searchTerm.trim() ? `搜索“${favoritesView.searchTerm.trim()}”，找到 ${filteredFavoriteGames.length} 个 / 共 ${favoriteGames.length} 个` : `共 ${favoriteGames.length} 个收藏游戏，点击卡片进入详情页`}
+              icon={<Heart className="h-5 w-5 text-rose-500" />}
+              games={filteredFavoriteGames}
+              source={resolveFavoriteSource}
+              emptyIcon={<Heart className="h-12 w-12 text-rose-200" />}
+              emptyTitle={favoritesView.searchTerm.trim() || favoriteFilterCount > 0 ? '没有匹配的收藏游戏' : '暂无收藏的游戏'}
+              emptyDescription="在游戏详情页点击收藏即可添加"
+              scrollTop={favoritesView.scrollTop}
+              headerControls={
+                <LibrarySearchControls
+                  searchTerm={favoritesView.searchTerm}
+                  selectedTargets={favoritesView.selectedTargets}
+                  selectedSpaces={favoritesView.selectedSpaces}
+                  selectedGroups={favoritesView.selectedGroups}
+                  filterOptions={favoriteFilterOptions}
+                  activeFilterCount={favoriteFilterCount}
+                  compact
+                  onSearchTermChange={(searchTerm) => updateFavoritesView({ searchTerm, scrollTop: 0 })}
+                  onSelectedTargetsChange={(selectedTargets) => updateFavoritesView({ selectedTargets, scrollTop: 0 })}
+                  onSelectedSpacesChange={(selectedSpaces) => updateFavoritesView({ selectedSpaces, scrollTop: 0 })}
+                  onSelectedGroupsChange={(selectedGroups) => updateFavoritesView({ selectedGroups, scrollTop: 0 })}
+                  onResetFilters={resetFavoriteFilters}
+                  onCreateGame={handleCreateGame}
+                />
+              }
+              getCardAction={(game) => ({
+                label: '取消收藏',
+                icon: <Heart className="h-3.5 w-3.5 fill-rose-500" />,
+                tone: 'rose',
+                onAction: () => unfavoriteGame(game),
+              })}
+              onScroll={(scrollTop) => updateFavoritesView({ scrollTop })}
+              onSelectGame={(game) => pickGame(game, resolveFavoriteSource(game))}
+            />
+          )
+        )}
+      </main>
     </div>
   );
 }
