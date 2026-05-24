@@ -816,9 +816,9 @@ function PaginatedGameDetail({
           上一页
         </Button>
         {source === 'ai' && (
-          <Button onClick={onSaveAi} className="h-9 rounded-lg bg-amber-500 px-4 text-xs font-black text-white hover:bg-amber-600">
-            <Star className="h-4 w-4 fill-white" />
-            查看我的游戏库记录
+          <Button onClick={onSaveAi} className="h-9 rounded-lg bg-primary-500 px-4 text-xs font-black text-white hover:bg-primary-600">
+            <BookOpen className="h-4 w-4" />
+            添加到我的游戏库
           </Button>
         )}
         <Button variant="outline" onClick={() => setPageIndex((current) => Math.min(pages.length - 1, current + 1))} disabled={!canNext} className="h-9 rounded-lg border-slate-200 text-xs font-black">
@@ -1665,12 +1665,6 @@ export function GameLibraryWorkbench() {
       }));
       setGenerationRound(nextRound);
       setAiGames(nextGames);
-      setLibraryGames((current) => {
-        const existingIds = new Set(current.map((game) => game.id));
-        const merged = [...nextGames.filter((game) => !existingIds.has(game.id)), ...current];
-        void persistUserGames(merged, seedIds);
-        return merged;
-      });
       setSelectedGameId('');
       setSelectedGameSource('ai');
       setAiViewMode('result');

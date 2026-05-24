@@ -20,9 +20,53 @@ interface FavoriteItem {
   createdAt: string;
 }
 
+interface MovementSearchResult {
+  isSportMovement: boolean;
+  confidence?: number;
+  normalizedName?: string;
+  reason?: string;
+  data?: MovementProgression[];
+}
+
 const STORAGE_KEY_FAVORITES = 'movement_favorites';
 const STORAGE_KEY_LAST_RESULT = 'movement_last_search_result';
 const STORAGE_KEY_HISTORY = 'movement_search_history';
+
+const SPORT_MOVEMENT_ERROR = '请输入具体的体育动作名称，例如：篮球投篮、前滚翻、短跑起跑、蛙泳出发。';
+
+function extractJsonObject(text: string): MovementSearchResult {
+  try {
+    return JSON.parse(text) as MovementSearchResult;
+  } catch {
+    const cleaned = text.replace(/```json|```/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error('AI 返回内容不是 JSON 对象');
+    }
+    return JSON.parse(cleaned.slice(start, end + 1)) as MovementSearchResult;
+  }
+}
+
+function isValidMovementProgression(item: unknown): item is MovementProgression {
+  if (!item || typeof item !== 'object') return false;
+  const candidate = item as Record<string, unknown>;
+  return ['step', 'action', 'keyPoints', 'commonMistakes'].every(
+    (key) => typeof candidate[key] === 'string' && candidate[key].trim().length > 0
+  );
+}
+
+function normalizeMovementData(data: unknown): MovementProgression[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter(isValidMovementProgression).slice(0, 6);
+}
+
+function looksLikePotentialMovementQuery(term: string): boolean {
+  const normalized = term.trim();
+  if (!normalized || normalized.length > 30) return false;
+  if (/^https?:\/\//i.test(normalized)) return false;
+  return /[\p{L}\p{N}]/u.test(normalized);
+}
 
 const DEFAULT_DATA: MovementProgression[] = [
   {
@@ -245,43 +289,75 @@ export function MovementDecompositionTable() {
 
   const handleSearch = async (e?: React.FormEvent, termOverride?: string) => {
     if (e) e.preventDefault();
-    const term = termOverride || searchTerm;
+    const term = (termOverride || searchTerm).trim();
     if (!term.trim()) return;
+    if (!looksLikePotentialMovementQuery(term)) {
+      setError(SPORT_MOVEMENT_ERROR);
+      setShowHistory(false);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     setShowHistory(false);
 
     try {
-      const systemPrompt = '你是一位专业的体育教练和人体运动学专家。请根据用户输入的动作名称，输出JSON格式的动作拆解数据。';
+      const systemPrompt = '你是一位严谨的体育教练和人体运动学专家。你的任务是先判断用户输入是否为具体体育动作，再输出JSON格式结果。';
       
-      const userPrompt = `请对"${term}"这个运动动作进行专业的精细化拆解。
+      const userPrompt = `用户输入："${term}"
 
-要求：
-1. 返回一个JSON数组。
-2. 每个对象包含：step (阶段名称), action (动作说明), keyPoints (技术要点), commonMistakes (常见错误)。
-3. 拆解步骤通常为4-6步，涵盖准备、爆发、核心过程、结束/恢复等阶段。
-4. 语言专业、简洁、易懂。
-5. 必须返回纯JSON格式，可以直接被 JSON.parse 解析。不要包含 Markdown 标记。`;
+请严格按下面规则返回一个纯 JSON 对象，不要包含 Markdown 标记、解释或多余文字。
+
+判断规则：
+1. 只有当输入是具体体育动作、运动技术、体能练习动作或可在体育课中教学的身体动作时，isSportMovement 才能为 true。
+2. 如果输入是普通名词、学科词、食品、地点、人物、情绪、闲聊、抽象概念，或不是明确身体动作，必须返回 isSportMovement: false。
+3. 不要为了满足请求强行把无关词改编成运动动作。
+
+如果不是体育动作，返回：
+{
+  "isSportMovement": false,
+  "confidence": 0,
+  "reason": "简短说明为什么不是体育动作"
+}
+
+如果是体育动作，返回：
+{
+  "isSportMovement": true,
+  "confidence": 0.9,
+  "normalizedName": "规范动作名称",
+  "data": [
+    {
+      "step": "阶段名称",
+      "action": "动作说明",
+      "keyPoints": "技术要点",
+      "commonMistakes": "常见错误"
+    }
+  ]
+}
+
+confidence 必须是 0.85 到 1 之间的小数。
+data 要求：4-6步，涵盖准备、发力/启动、核心过程、结束/恢复等阶段；语言专业、简洁、适合体育教师课堂使用。`;
 
       const text = await generate(systemPrompt, userPrompt);
       if (!text) throw new Error('AI 未返回内容');
       
-      const parsedData = JSON.parse(text);
+      const result = extractJsonObject(text);
+      const parsedData = normalizeMovementData(result.data);
       
-      if (Array.isArray(parsedData) && parsedData.length > 0) {
+      if (result.isSportMovement === true && (result.confidence ?? 0) >= 0.75 && parsedData.length >= 3) {
         setData(parsedData);
-        setMovementName(term);
-        addToHistory(term);
+        const displayName = result.normalizedName?.trim() || term;
+        setMovementName(displayName);
+        addToHistory(displayName);
         setSearchTerm(''); // Clear search after success
         // 保存最后一次搜索结果到桌面数据文件，下次打开时自动显示
-        void writeDesktopStore(STORAGE_KEY_LAST_RESULT, { name: term, data: parsedData });
+        void writeDesktopStore(STORAGE_KEY_LAST_RESULT, { name: displayName, data: parsedData });
       } else {
-        throw new Error('返回数据格式不正确');
+        setError(result.reason?.trim() || SPORT_MOVEMENT_ERROR);
       }
     } catch (err) {
       console.error('AI Generation Error:', err);
-      setError('无法获取动作拆解，请换个词试试 (例如: "篮球投篮"、"游泳出发")');
+      setError('无法获取有效的动作拆解，请输入具体体育动作，例如：篮球投篮、游泳出发、前滚翻。');
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Sparkles,
   MapPin,
@@ -36,6 +36,13 @@ interface LeftPanelProps {
   onToggleFavorites: () => void;
 }
 
+interface TopicValidationResult {
+  isSportsLessonTopic?: boolean;
+  confidence?: number;
+  normalizedTopic?: string;
+  reason?: string;
+}
+
 const GRADE_OPTIONS = [
   '小学一年级',
   '小学二年级',
@@ -47,6 +54,45 @@ const GRADE_OPTIONS = [
   '初中二年级',
   '初中三年级',
 ];
+
+const SPORTS_TOPIC_ERROR =
+  '请输入具体的体育课题，例如：前滚翻、篮球运球、立定跳远、运动后合理补水。';
+
+const CLEARLY_UNRELATED_TOPICS = [
+  '吃饭',
+  '睡觉',
+  '数学',
+  '语文',
+  '英语',
+  '物理',
+  '化学',
+  '历史',
+  '地理',
+  '生物',
+  '政治',
+  '音乐',
+  '美术',
+  '编程',
+  '天气',
+  '旅游',
+  '做饭',
+  '游戏',
+];
+
+function isClearlyUnrelatedTopic(value: string) {
+  const normalized = value.replace(/\s+/g, '').toLowerCase();
+  return CLEARLY_UNRELATED_TOPICS.includes(normalized);
+}
+
+function getLocalValidatedTopic(value: string) {
+  const inputTopic = value.trim();
+
+  if (!inputTopic || isClearlyUnrelatedTopic(inputTopic)) {
+    throw new Error(SPORTS_TOPIC_ERROR);
+  }
+
+  return inputTopic;
+}
 
 export function LeftPanel({
   plansCount,
@@ -63,44 +109,108 @@ export function LeftPanel({
   const [venue, setVenue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const topicInputRef = useRef<HTMLInputElement>(null);
 
   const { generate } = useAIProvider();
 
   /** 解析 AI 返回的文本，尝试提取 JSON */
-  function extractJson(raw: string): LessonPlanV2 | null {
-    // 先尝试直接 parse
+  function extractJson<T>(raw: string): T | null {
+    const text = raw.trim();
+
     try {
-      return JSON.parse(raw) as LessonPlanV2;
+      return JSON.parse(text) as T;
     } catch {
-      // 尝试从 Markdown 代码块中提取
-      const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (match) {
         try {
-          return JSON.parse(match[1].trim()) as LessonPlanV2;
+          return JSON.parse(match[1].trim()) as T;
+        } catch {
+          // 继续尝试从正文中截取 JSON 对象
+        }
+      }
+
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        try {
+          return JSON.parse(text.slice(start, end + 1)) as T;
         } catch {
           return null;
         }
       }
+
       return null;
     }
   }
 
+  const focusTopicInput = () => {
+    window.setTimeout(() => {
+      topicInputRef.current?.focus();
+      topicInputRef.current?.select();
+    }, 0);
+  };
+
+  const validateTopic = async (inputTopic: string) => {
+    const systemPrompt =
+      '你是一位严谨的中小学体育教研员。你的任务是判断用户输入是否适合作为体育与健康课程的教案课题。';
+
+    const userPrompt = `用户输入："${inputTopic}"
+
+请严格按下面规则返回一个纯 JSON 对象，不要包含 Markdown 标记、解释或多余文字。
+
+判断规则：
+1. 只有当输入是体育项目、运动技能、体能练习、课堂体育游戏、体育安全、运动健康或可在体育与健康课中教学的明确主题时，isSportsLessonTopic 才能为 true。
+2. 如果输入是普通食品、普通名词、其他学科、人物、地点、情绪、闲聊、抽象概念，或无法形成体育教学目标的词语，必须返回 isSportsLessonTopic: false。
+3. 不要为了满足请求强行把无关词改编成体育课题。例如"吃饭"不能改编成夹球或模仿动作；但"运动后合理饮食"可以视为运动健康课题。
+
+如果不是体育课题，返回：
+{
+  "isSportsLessonTopic": false,
+  "confidence": 0,
+  "reason": "简短说明为什么不是体育课题"
+}
+
+如果是体育课题，返回：
+{
+  "isSportsLessonTopic": true,
+  "confidence": 0.9,
+  "normalizedTopic": "规范课题名称",
+  "reason": ""
+}
+
+confidence 必须是 0 到 1 之间的小数。`;
+
+    const text = await generate(systemPrompt, userPrompt);
+    const result = extractJson<TopicValidationResult>(text);
+    const confidence = result?.confidence ?? 0;
+
+    if (result?.isSportsLessonTopic === true && confidence >= 0.75) {
+      return result.normalizedTopic?.trim() || inputTopic;
+    }
+
+    throw new Error(result?.reason?.trim() || SPORTS_TOPIC_ERROR);
+  };
+
   // AI 生成：调用 API → 解析 JSON → 存入桌面数据文件 → 刷新列表并选中
   const handleGenerate = async () => {
     if (!topic.trim()) return;
-    setIsGenerating(true);
     setErrorMsg('');
 
     try {
+      const inputTopic = getLocalValidatedTopic(topic);
+
+      setIsGenerating(true);
+      const validatedTopic = await validateTopic(inputTopic);
+
       const { systemPrompt, userPrompt } = buildLessonPlanPromptV2({
-        topic: topic.trim(),
+        topic: validatedTopic,
         grade,
         venue: venue.trim(),
       });
 
       const rawText = await generate(systemPrompt, userPrompt);
 
-      const parsed = extractJson(rawText);
+      const parsed = extractJson<LessonPlanV2>(rawText);
       if (!parsed) {
         throw new Error('AI 返回的数据格式不正确，无法解析为有效的教案 JSON。请重试。');
       }
@@ -112,6 +222,7 @@ export function LeftPanel({
       onPlanGenerated(savedPlan);
     } catch (err: any) {
       setErrorMsg(err.message || '生成失败，请检查 API 配置后重试。');
+      focusTopicInput();
     } finally {
       setIsGenerating(false);
     }
@@ -132,10 +243,14 @@ export function LeftPanel({
               课题名称
             </Label>
             <Input
+              ref={topicInputRef}
               id="v2-topic"
               placeholder="例如：前滚翻、立定跳远..."
               value={topic}
-              onChange={(e) => setTopic(e.target.value)}
+              onChange={(e) => {
+                setTopic(e.target.value);
+                if (errorMsg) setErrorMsg('');
+              }}
               className="mt-1 h-9 text-sm"
             />
           </div>

@@ -4,8 +4,9 @@ import {
   UserPlus,
   KeyRound,
   Sparkles,
-  Database,
-  Users,
+  FileText,
+  Target,
+  Shield,
   ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,21 +42,11 @@ const MODE_META: Record<
   },
 };
 
-const THEME_LABELS: Record<string, string> = {
-  ocean: '海蓝微风',
-  sunset: '夕阳暖日',
-  'cyan-blue': '青蓝之境',
-  minimal: '极简纯粹',
-  'insight-grid': '智穹蓝',
-  aurora: '暗夜极光',
-};
-
 type AuthScreenProps = {
   onLogin: (username: string) => Promise<void> | void;
 };
 
 export function AuthScreen({ onLogin }: AuthScreenProps) {
-  const theme = useAppStore((state) => state.theme);
   const [mode, setMode] = useState<AuthMode>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -69,27 +60,26 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const modeMeta = MODE_META[mode];
-  const themeLabel = THEME_LABELS[theme] ?? '当前主题';
 
   const heroItems = useMemo(
     () => [
       {
-        icon: Sparkles,
-        title: '主题无缝衔接',
-        description: `当前使用「${themeLabel}」主题，登录前后保持同一视觉语言。`,
+        icon: FileText,
+        title: 'AI 写教案',
+        description: '覆盖田径、球类、体操等全部项目，自动生成符合教学规范的完整教案结构。',
       },
       {
-        icon: Database,
-        title: '本地独立存储',
-        description: '每个账户拥有独立的历史教案、模型配置和使用记录。',
+        icon: Target,
+        title: '精准匹配',
+        description: '根据年级、课时类型、场地条件智能调整教案内容，输出即用。',
       },
       {
-        icon: Users,
-        title: '适合多人共用设备',
-        description: '支持注册多个本地账户，并通过锁屏或退出快速切换。',
+        icon: Shield,
+        title: '账户隔离',
+        description: '每位教师独立账户，教案互不可见。支持密码锁定，离开工位一键锁屏。',
       },
     ],
-    [themeLabel],
+    [],
   );
 
   const loadExistingUsers = async () => {
@@ -208,10 +198,10 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
 
             <div className="mt-6 max-w-2xl">
               <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                登录前后保持同一套工作台体验
+                你的 AI 体育教学助手
               </h1>
               <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-                这里不是孤立的登录页，而是教案系统的一部分。账号、主题、历史记录和设备内数据在同一套界面语言里自然衔接。
+                从教案撰写到课堂活动设计，AI 辅助覆盖备课全流程。本地多账户支持，让每位教师拥有专属工作空间。
               </p>
             </div>
 
@@ -230,15 +220,8 @@ export function AuthScreen({ onLogin }: AuthScreenProps) {
               ))}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <div className="rounded-2xl border border-border/70 bg-background/75 px-4 py-3 shadow-sm">
-                <div className="text-xs font-medium text-muted-foreground">本地账户数</div>
-                <div className="mt-1 text-2xl font-semibold text-foreground">{existingUsers.length}</div>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-background/75 px-4 py-3 shadow-sm">
-                <div className="text-xs font-medium text-muted-foreground">当前主题</div>
-                <div className="mt-1 text-base font-semibold text-foreground">{themeLabel}</div>
-              </div>
+            <div className="mt-6 rounded-2xl border border-border/70 bg-background/75 px-4 py-3 text-sm leading-6 text-muted-foreground shadow-sm">
+              初次使用，请前往设置查看使用指南，配置好 API 即可开启智能助手。
             </div>
           </div>
         </section>
