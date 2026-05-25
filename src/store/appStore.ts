@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getDefaultClassCounts, EDUCATION_LEVELS } from '../constants/education';
+import type { LessonPlanV2 } from '../utils/lessonPlanStorageV2';
 
 export interface FormState {
   grades: string[];
@@ -39,6 +40,7 @@ export interface LessonPlan {
   title: string;
   date: string;
   content: string; // Markdown
+  structuredPlan?: LessonPlanV2;
   tags: string[];
   summary: string;
   grades: string[];

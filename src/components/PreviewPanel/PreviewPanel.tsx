@@ -61,6 +61,8 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const displayContent = isEditing ? editedContent : (previewedHistoryPlan ? previewedHistoryPlan.content : currentPlanContent);
   const displayTitle = previewedHistoryPlan ? previewedHistoryPlan.title : form.courseName;
   const displayGrades = previewedHistoryPlan ? previewedHistoryPlan.grades : form.grades;
+  const isWorkspacePanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
+  const shouldShowPreviewActions = !!displayContent && !isGenerating && !isWorkspacePanelOpen;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -454,7 +456,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         )}
       </div>
 
-      {displayContent && !isGenerating && (
+      {shouldShowPreviewActions && (
         <div className="absolute bottom-4 right-2 sm:bottom-8 sm:right-8 z-50 flex flex-col items-end gap-2 sm:gap-3">
           {showSuccessMsg && (
             <div className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full shadow-lg font-medium animate-in fade-in slide-in-from-right-4 mb-1 sm:mb-2">

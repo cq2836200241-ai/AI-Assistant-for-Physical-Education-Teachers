@@ -1,5 +1,5 @@
 import seedData from '../date/lesson_plans_seed_v2.json';
-import { readDesktopStore, writeDesktopStore } from '../lib/desktopStorage';
+import { readDesktopUserStore, writeDesktopUserStore } from '../lib/desktopStorage';
 import {
   standardizeLessonPlanProcess,
   standardizeLessonPlansProcess,
@@ -42,8 +42,8 @@ export interface LessonPlanV2 {
 
 const STORAGE_KEY = 'lesson-plans-v2';
 const FAVORITES_KEY = 'lesson-plans-v2-favorites';
-let plansCache: LessonPlanV2[] | null = null;
-let favoritesCache: LessonPlanV2[] | null = null;
+let plansCache: { username: string; plans: LessonPlanV2[] } | null = null;
+let favoritesCache: { username: string; favorites: LessonPlanV2[] } | null = null;
 
 function matchesLessonPlan(a: LessonPlanV2, b: LessonPlanV2): boolean {
   return (
@@ -71,77 +71,107 @@ function getSeedPlans(): LessonPlanV2[] {
   return standardizeLessonPlansProcess(seedData.filter(isLessonPlanV2) as LessonPlanV2[]);
 }
 
-async function readStoredPlans(): Promise<LessonPlanV2[] | null> {
-  const parsed = await readDesktopStore<unknown>(STORAGE_KEY, null);
+async function getCurrentUsername(): Promise<string | null> {
+  const session = await window.desktopSession?.get();
+  const username = session?.currentUser?.trim();
+  return username || null;
+}
+
+async function readStoredPlans(username: string): Promise<LessonPlanV2[] | null> {
+  const parsed = await readDesktopUserStore<unknown>(username, STORAGE_KEY, null);
   if (!Array.isArray(parsed)) return null;
   return standardizeLessonPlansProcess(parsed.filter(isLessonPlanV2));
 }
 
-async function writeStoredPlans(plans: LessonPlanV2[]) {
-  plansCache = plans;
-  await writeDesktopStore(STORAGE_KEY, plans);
+async function writeStoredPlans(username: string, plans: LessonPlanV2[]) {
+  plansCache = { username, plans };
+  await writeDesktopUserStore(username, STORAGE_KEY, plans);
 }
 
 export async function initializeSeedDataV2() {
-  const stored = await readStoredPlans();
+  const username = await getCurrentUsername();
+  if (!username) return;
+
+  const stored = await readStoredPlans(username);
   if (stored && stored.length > 0) return;
-  await writeStoredPlans(getSeedPlans());
+  await writeStoredPlans(username, getSeedPlans());
 }
 
 export async function getAllLessonPlansV2(): Promise<LessonPlanV2[]> {
-  if (plansCache) return plansCache;
-  const stored = await readStoredPlans();
+  const username = await getCurrentUsername();
+  if (!username) return [];
+
+  if (plansCache?.username === username) return plansCache.plans;
+  const stored = await readStoredPlans(username);
   if (stored) {
-    plansCache = stored;
+    plansCache = { username, plans: stored };
     return stored;
   }
   const seeds = getSeedPlans();
-  await writeStoredPlans(seeds);
+  await writeStoredPlans(username, seeds);
   return seeds;
 }
 
 export async function addLessonPlanV2(plan: LessonPlanV2) {
+  const username = await getCurrentUsername();
+  if (!username) {
+    throw new Error('请先登录账号，再生成并保存教案。');
+  }
+
   if (!isLessonPlanV2(plan)) {
     throw new Error('教案数据结构不完整，无法保存到 V2 教案库。');
   }
   const standardizedPlan = standardizeLessonPlanProcess(plan);
   const plans = await getAllLessonPlansV2();
-  await writeStoredPlans([standardizedPlan, ...plans]);
+  await writeStoredPlans(username, [standardizedPlan, ...plans]);
   return standardizedPlan;
 }
 
 /* ─── 教案收藏 ─── */
 
 export async function getFavorites(): Promise<LessonPlanV2[]> {
-  if (favoritesCache) return favoritesCache;
-  const parsed = await readDesktopStore<unknown>(FAVORITES_KEY, []);
+  const username = await getCurrentUsername();
+  if (!username) return [];
+
+  if (favoritesCache?.username === username) return favoritesCache.favorites;
+  const parsed = await readDesktopUserStore<unknown>(username, FAVORITES_KEY, []);
   favoritesCache = Array.isArray(parsed)
-    ? standardizeLessonPlansProcess(parsed.filter(isLessonPlanV2))
-    : [];
-  return favoritesCache;
+    ? { username, favorites: standardizeLessonPlansProcess(parsed.filter(isLessonPlanV2)) }
+    : { username, favorites: [] };
+  return favoritesCache.favorites;
 }
 
 export async function addFavorite(plan: LessonPlanV2) {
+  const username = await getCurrentUsername();
+  if (!username) return;
+
   if (!isLessonPlanV2(plan)) return;
   const standardizedPlan = standardizeLessonPlanProcess(plan);
   const favorites = await getFavorites();
   const exists = favorites.some((f) => matchesLessonPlan(f, standardizedPlan));
   if (exists) return;
-  favoritesCache = [standardizedPlan, ...favorites];
-  await writeDesktopStore(FAVORITES_KEY, favoritesCache);
+  const nextFavorites = [standardizedPlan, ...favorites];
+  favoritesCache = { username, favorites: nextFavorites };
+  await writeDesktopUserStore(username, FAVORITES_KEY, nextFavorites);
 }
 
 export async function removeFavorite(plan: LessonPlanV2) {
+  const username = await getCurrentUsername();
+  if (!username) return;
+
   const favorites = await getFavorites();
   const filtered = favorites.filter((f) => !matchesLessonPlan(f, plan));
-  favoritesCache = filtered;
-  await writeDesktopStore(FAVORITES_KEY, filtered);
+  favoritesCache = { username, favorites: filtered };
+  await writeDesktopUserStore(username, FAVORITES_KEY, filtered);
 }
 
 export async function deleteLessonPlanV2(plan: LessonPlanV2): Promise<void> {
+  const username = await getCurrentUsername();
+  if (!username) return;
+
   const plans = await getAllLessonPlansV2();
   const filtered = plans.filter((p) => !matchesLessonPlan(p, plan));
-  await writeStoredPlans(filtered);
+  await writeStoredPlans(username, filtered);
   await removeFavorite(plan);
 }
 

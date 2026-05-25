@@ -13,6 +13,8 @@ import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, C
 import Lottie from 'lottie-react';
 import logoAnimation from './assets/animations/Awesome.json';
 import { initializeSeedDataV2 } from './utils/lessonPlanStorageV2';
+import { standardizeLessonPlanProcess } from './utils/lessonPlanProcessStandard';
+import { extractLessonPlanJson, renderLessonPlanToMarkdown } from './utils/lessonPlanMarkdown';
 
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -93,6 +95,15 @@ function MainApp() {
   // 已移除 beforeunload 事件拦截 — 该事件在 EXE/Electron 环境中会静默阻止窗口关闭，
   // 导致关闭按钮失效。应用使用 Zustand persist 自动保存数据，无需此保护。
 
+  const getLessonPlanMarkdownOptions = () => {
+    const isCustomEnabled = store.form.customDetailsEnabled;
+    return {
+      includeEquipment: isCustomEnabled ? store.form.includeEquipment : true,
+      includeTeacherActivity: isCustomEnabled ? store.form.includeTeacherActivity : true,
+      includeReflection: isCustomEnabled ? store.form.includeReflection : true,
+    };
+  };
+
   const handleGenerate = async (isRegeneration: boolean = false) => {
     // 收起所有功能面板
     setShowSchedule(false);
@@ -117,23 +128,34 @@ function MainApp() {
       await generateStream(systemPrompt, userPrompt, (text) => {
         generatedText = text;
         const now = Date.now();
-        // Throttle React state updates to ~6 fps (every 150ms) to prevent markdown rendering from freezing the browser
+        // JSON is rendered into the existing Markdown preview only after the response is complete.
         if (now - lastUpdateTime > 150) {
-          store.setCurrentPlanContent(text);
           let progress = Math.min(Math.floor(100 * (1 - Math.exp(-text.length / 2500))), 99);
           store.setGenerationProgress(progress);
           lastUpdateTime = now;
         }
       });
-      
-      // Flush the remaining text and finalize progress
-      store.setCurrentPlanContent(generatedText);
-      
+
       if (!useAppStore.getState().isGenerating) {
          // User stopped generation, don't save to history or trigger confetti
          store.setCurrentPlanContent(prev => prev + '\n\n*(生成已中止)*');
          return;
       }
+      
+      const parsedPlan = extractLessonPlanJson(generatedText);
+      if (!parsedPlan) {
+        console.warn('[教案生成] 无法解析 AI 返回 JSON，原始返回前 500 字：', generatedText.slice(0, 500));
+        throw new Error('AI 返回的数据格式不正确，无法解析为有效的教案 JSON。请重试。');
+      }
+
+      const structuredPlan = standardizeLessonPlanProcess(parsedPlan);
+      const markdownContent = renderLessonPlanToMarkdown(
+        structuredPlan,
+        getLessonPlanMarkdownOptions(),
+      );
+
+      // Flush the rendered Markdown and finalize progress
+      store.setCurrentPlanContent(markdownContent);
       
       store.setGenerationProgress(100);
       confetti({
@@ -145,11 +167,12 @@ function MainApp() {
       // Save to history
       const newPlan = {
         id: Date.now().toString(),
-        title: store.form.courseName,
+        title: structuredPlan.课题名称 || store.form.courseName,
         date: new Date().toISOString(),
-        content: generatedText,
+        content: markdownContent,
+        structuredPlan,
         tags: [store.form.courseType, store.form.ability, ...store.form.grades],
-        summary: generatedText.slice(0, 100).replace(/#/g, '') + '...',
+        summary: markdownContent.slice(0, 100).replace(/#/g, '') + '...',
         grades: store.form.grades
       };
       // Optimistically update local store
