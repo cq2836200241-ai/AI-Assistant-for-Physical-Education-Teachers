@@ -17,6 +17,7 @@ import logoAnimation from './assets/animations/Awesome.json';
 import { initializeSeedDataV2 } from './utils/lessonPlanStorageV2';
 import { standardizeLessonPlanProcess } from './utils/lessonPlanProcessStandard';
 import { extractLessonPlanJson, renderLessonPlanToMarkdown } from './utils/lessonPlanMarkdown';
+import { validateSportsLessonTopic } from './utils/sportsLessonTopicValidation';
 
 import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
@@ -113,6 +114,16 @@ function MainApp() {
   };
 
   const handleGenerate = async (isRegeneration: boolean = false) => {
+    const topicValidation = validateSportsLessonTopic(store.form.courseName || '');
+    if (!topicValidation.isValid) {
+      const message = topicValidation.message || '当前系统仅支持体育与健康类教案。';
+      store.setIsGenerating(false);
+      store.setGenerationProgress(0);
+      store.setGenerationStatus(message);
+      store.setCurrentPlanContent(`❌ **生成失败**: ${message}`);
+      return;
+    }
+
     // 收起所有功能面板
     setShowSchedule(false);
     setShowGameLibrary(false);
@@ -491,7 +502,7 @@ function MainApp() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
-                  className={`fixed top-1/2 -translate-y-1/2 z-50 bg-amber-400 shadow-[0_4px_12px_rgba(0,0,0,0.15)] rounded-full flex items-center justify-center text-white hover:bg-amber-500 transition-all duration-300 overflow-visible`}
+                  className="fixed top-1/2 -translate-y-1/2 z-50 flex items-center justify-center overflow-visible rounded-full border border-white/20 bg-[color:color-mix(in_srgb,var(--theme-p-500)_72%,var(--theme-s-500))] text-white shadow-[0_8px_22px_rgba(8,19,29,0.22),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-[color:color-mix(in_srgb,var(--theme-p-400)_76%,var(--theme-s-500))] hover:shadow-[0_12px_28px_rgba(8,19,29,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]"
                   style={{
                     left: isConfigCollapsed ? '6px' : '428px',
                     width: '17px',

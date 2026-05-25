@@ -14,6 +14,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAIProvider } from '../../hooks/useAIProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { getGradesByLevel } from '../../constants/education';
+import { validateSportsLessonTopic } from '../../utils/sportsLessonTopicValidation';
 
 const ABILITY_LEVELS = [
   { id: '基础班', icon: '🔵', desc: '强调基础动作规范，降低难度' },
@@ -22,19 +23,22 @@ const ABILITY_LEVELS = [
 ];
 
 const accordionItemClassName =
-  'overflow-hidden rounded-[28px] border border-white/14 bg-white/12 shadow-[0_10px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300 hover:border-white/24 hover:bg-white/15 data-[state=open]:bg-white/16 data-[state=open]:shadow-[0_14px_34px_rgba(4,44,85,0.2)] data-[state=open]:hover:border-white/30';
+  'overflow-hidden rounded-[24px] border border-white/14 bg-white/12 shadow-[0_10px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300 hover:border-white/24 hover:bg-white/15 data-[state=open]:bg-white/16 data-[state=open]:shadow-[0_14px_34px_rgba(4,44,85,0.2)] data-[state=open]:hover:border-white/30';
 
 const accordionTriggerClassName =
-  'rounded-[28px] border border-transparent bg-transparent px-4 py-3.5 text-left text-white hover:no-underline hover:bg-white/8 data-[state=open]:rounded-b-[22px] data-[state=open]:border-white/0 data-[state=open]:bg-white/10';
+  'rounded-[24px] border border-transparent bg-transparent px-4 py-2.5 text-left text-white hover:no-underline hover:bg-white/8 data-[state=open]:rounded-b-[18px] data-[state=open]:border-white/0 data-[state=open]:bg-white/10';
 
 const accordionPanelClassName =
-  'px-4 pb-4 pt-2 space-y-4 rounded-[24px] border-t border-white/14 bg-white/94 text-slate-900';
+  'px-4 pb-3 pt-2 space-y-3 rounded-[20px] border-t border-white/14 bg-white/94 text-slate-900';
 
 const panelActionCardBaseClassName =
   'group flex w-full items-center justify-between gap-3 rounded-[26px] border px-4 py-4 text-left shadow-[0_12px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300';
 
 const panelActionCardIconBaseClassName =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300';
+  'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300';
+
+const settingsRegionClassName =
+  'custom-scrollbar relative max-h-[calc(100%-176px)] shrink-0 overflow-y-auto rounded-[30px] border border-black/10 bg-[linear-gradient(180deg,rgba(148,48,14,0.28),rgba(101,22,6,0.42))] p-2.5 pr-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_36px_rgba(92,24,7,0.2)] sm:p-3 sm:pr-2';
 
 type ConfigPanelProps = {
   onGenerate: (isRegeneration?: boolean) => void;
@@ -60,11 +64,23 @@ export function ConfigPanel({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [countdown, setCountdown] = useState(4);
+  const [courseNameError, setCourseNameError] = useState('');
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   
   const { generate } = useAIProvider();
+  const courseNameValidation = validateSportsLessonTopic(form.courseName || '');
+  const hasCourseNameInput = Boolean((form.courseName || '').trim());
+  const showCourseNameError = hasCourseNameInput && (!courseNameValidation.isValid || Boolean(courseNameError));
+
+  const validateCourseName = () => {
+    const validation = validateSportsLessonTopic(form.courseName || '');
+    setCourseNameError(validation.isValid ? '' : validation.message || '');
+    return validation.isValid;
+  };
 
   const handleStartProcess = () => {
+    if (!validateCourseName()) return;
+
     const hasDuplicate = history.some(plan => 
       plan.title === form.courseName && 
       plan.grades.length === form.grades.length && 
@@ -79,11 +95,15 @@ export function ConfigPanel({
   };
 
   const handleDuplicateConfirm = () => {
+    if (!validateCourseName()) return;
+
     setShowDuplicateWarning(false);
     handleStartPreview();
   };
 
   const handleStartPreview = () => {
+    if (!validateCourseName()) return;
+
     setShowPreviewModal(true);
     setCountdown(4);
   };
@@ -95,7 +115,9 @@ export function ConfigPanel({
           if (prev <= 1) {
             clearInterval(countdownRef.current!);
             setShowPreviewModal(false);
-            onGenerate();
+            if (validateCourseName()) {
+              onGenerate();
+            }
             return 0;
           }
           return prev - 1;
@@ -121,6 +143,8 @@ export function ConfigPanel({
   };
 
   const handleConfirm = () => {
+    if (!validateCourseName()) return;
+
     setShowPreviewModal(false);
     if (countdownRef.current) clearInterval(countdownRef.current);
     onGenerate();
@@ -166,9 +190,11 @@ export function ConfigPanel({
   };
 
   return (
-    <div className="config-panel-theme-gradient config-panel-pro-background relative isolate flex h-full flex-col gap-3 overflow-hidden rounded-3xl border border-white/12 p-3 shadow-[0_18px_46px_rgba(6,42,84,0.22)] sm:p-5">
+    <div className="config-panel-theme-gradient config-panel-pro-background relative isolate flex h-full min-h-0 flex-col gap-2.5 overflow-hidden rounded-3xl border border-white/12 p-3 shadow-[0_18px_46px_rgba(6,42,84,0.22)] sm:p-4">
       <TooltipProvider>
-        <Accordion {...({ type: "single", defaultValue: "basic-info" } as any)} className="w-full space-y-3.5">
+        <div className={settingsRegionClassName}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,183,103,0.18),transparent_55%)]" />
+          <Accordion defaultValue={[]} className="relative w-full space-y-2.5">
           
           {/* Section 1: 年级与基础信息 */}
           <AccordionItem value="basic-info" className={accordionItemClassName}>
@@ -252,8 +278,17 @@ export function ConfigPanel({
                    className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
                    placeholder="如：前滚翻、跳绳" 
                    value={form.courseName || ''}
-                   onChange={e => setForm({ courseName: e.target.value })}
+                   onChange={e => {
+                     setForm({ courseName: e.target.value });
+                     setCourseNameError('');
+                   }}
+                   aria-invalid={showCourseNameError}
                  />
+                 {showCourseNameError && (
+                   <p className="text-[12px] leading-relaxed text-rose-600">
+                     {courseNameError || courseNameValidation.message}
+                   </p>
+                 )}
                </div>
 
                <div className="flex gap-3">
@@ -475,7 +510,8 @@ export function ConfigPanel({
             </AccordionContent>
           </AccordionItem>
 
-        </Accordion>
+          </Accordion>
+        </div>
       </TooltipProvider>
 
       {!currentPlanContent && (
@@ -484,7 +520,7 @@ export function ConfigPanel({
              size="lg" 
              className={`${panelActionCardBaseClassName} h-auto border-emerald-200/35 bg-linear-to-r from-[#35c84a]/95 via-[#2fbd44]/95 to-[#239c35]/95 text-white hover:-translate-y-0.5 hover:border-emerald-100/60 hover:shadow-[0_18px_42px_rgba(35,156,53,0.28)] disabled:translate-y-0 disabled:border-emerald-200/35 disabled:bg-linear-to-r disabled:from-[#35c84a]/95 disabled:via-[#2fbd44]/95 disabled:to-[#239c35]/95 disabled:text-white disabled:opacity-100`}
              onClick={handleStartProcess}
-             disabled={isGenerating || form.grades.length === 0 || !form.courseName}
+             disabled={isGenerating || form.grades.length === 0 || !form.courseName || !courseNameValidation.isValid}
           >
             <div className="flex min-w-0 items-center gap-3">
               <div className={`${panelActionCardIconBaseClassName} border-white/22 bg-white/18 text-white group-hover:scale-105 group-hover:bg-white/24`}>
