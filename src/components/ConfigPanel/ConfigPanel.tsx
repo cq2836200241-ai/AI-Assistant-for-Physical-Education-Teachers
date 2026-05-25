@@ -55,7 +55,7 @@ export function ConfigPanel({
   onToggleAdopted,
   onToggleHistory,
 }: ConfigPanelProps) {
-  const { form, setForm, isGenerating, history, currentPlanContent, educationLevel } = useAppStore();
+  const { form, setForm, isGenerating, history, educationLevel } = useAppStore();
   const gradeOptions = getGradesByLevel(educationLevel);
   const [isGeneratingTopic, setIsGeneratingTopic] = useState(false);
   const [isGeneratingFocus, setIsGeneratingFocus] = useState(false);
@@ -514,52 +514,50 @@ export function ConfigPanel({
         </div>
       </TooltipProvider>
 
-      {!currentPlanContent && (
-        <div className="mt-2 shrink-0">
-          <Button 
-             size="lg" 
-             className={`${panelActionCardBaseClassName} h-auto border-emerald-200/35 bg-linear-to-r from-[#35c84a]/95 via-[#2fbd44]/95 to-[#239c35]/95 text-white hover:-translate-y-0.5 hover:border-emerald-100/60 hover:shadow-[0_18px_42px_rgba(35,156,53,0.28)] disabled:translate-y-0 disabled:border-emerald-200/35 disabled:bg-linear-to-r disabled:from-[#35c84a]/95 disabled:via-[#2fbd44]/95 disabled:to-[#239c35]/95 disabled:text-white disabled:opacity-100`}
-             onClick={handleStartProcess}
-             disabled={isGenerating || form.grades.length === 0 || !form.courseName || !courseNameValidation.isValid}
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <div className={`${panelActionCardIconBaseClassName} border-white/22 bg-white/18 text-white group-hover:scale-105 group-hover:bg-white/24`}>
-                <Play className="h-5 w-5 fill-current transition-transform duration-300 group-hover:scale-110" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[17px] font-extrabold tracking-[0.01em] sm:text-[18px]">
-                  {isGenerating ? (
-                    <div className="flex items-center gap-[1px]">
-                      {"正在制作教案...".split('').map((char, i) => (
-                        <motion.span
-                          key={i}
-                          initial={{ scale: 1 }}
-                          animate={{ scale: [1, 1.18, 1] }}
-                          transition={{
-                            duration: 0.8,
-                            repeat: Infinity,
-                            delay: i * 0.08,
-                            ease: "easeInOut"
-                          }}
-                          className="inline-block"
-                        >
-                          {char}
-                        </motion.span>
-                      ))}
-                    </div>
-                  ) : (
-                    '开始制作教案'
-                  )}
-                </div>
-                <div className="text-[12px] text-white/82">生成新的体育教案，并进入预览确认流程</div>
-              </div>
+      <div className="mt-2 shrink-0">
+        <Button 
+           size="lg" 
+           className={`${panelActionCardBaseClassName} h-auto border-emerald-200/35 bg-linear-to-r from-[#35c84a]/95 via-[#2fbd44]/95 to-[#239c35]/95 text-white hover:-translate-y-0.5 hover:border-emerald-100/60 hover:shadow-[0_18px_42px_rgba(35,156,53,0.28)] disabled:translate-y-0 disabled:border-emerald-200/35 disabled:bg-linear-to-r disabled:from-[#35c84a]/95 disabled:via-[#2fbd44]/95 disabled:to-[#239c35]/95 disabled:text-white disabled:opacity-100`}
+           onClick={handleStartProcess}
+           disabled={isGenerating || form.grades.length === 0 || !form.courseName || !courseNameValidation.isValid}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`${panelActionCardIconBaseClassName} border-white/22 bg-white/18 text-white group-hover:scale-105 group-hover:bg-white/24`}>
+              <Play className="h-5 w-5 fill-current transition-transform duration-300 group-hover:scale-110" />
             </div>
-            <div className="flex shrink-0 items-center gap-2 text-white/88">
-              <ChevronDown className="h-4 w-4 -rotate-90 transition-transform duration-300 group-hover:translate-x-0.5" />
+            <div className="min-w-0">
+              <div className="text-[17px] font-extrabold tracking-[0.01em] sm:text-[18px]">
+                {isGenerating ? (
+                  <div className="flex items-center gap-[1px]">
+                    {"正在制作教案...".split('').map((char, i) => (
+                      <motion.span
+                        key={i}
+                        initial={{ scale: 1 }}
+                        animate={{ scale: [1, 1.18, 1] }}
+                        transition={{
+                          duration: 0.8,
+                          repeat: Infinity,
+                          delay: i * 0.08,
+                          ease: "easeInOut"
+                        }}
+                        className="inline-block"
+                      >
+                        {char}
+                      </motion.span>
+                    ))}
+                  </div>
+                ) : (
+                  '开始制作教案'
+                )}
+              </div>
+              <div className="text-[12px] text-white/82">生成新的体育教案，并进入预览确认流程</div>
             </div>
-          </Button>
-        </div>
-      )}
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-white/88">
+            <ChevronDown className="h-4 w-4 -rotate-90 transition-transform duration-300 group-hover:translate-x-0.5" />
+          </div>
+        </Button>
+      </div>
 
       <div className="shrink-0 overflow-hidden rounded-[26px] border border-white/16 bg-white/12 shadow-[0_12px_28px_rgba(4,44,85,0.16)] backdrop-blur-md">
         <button

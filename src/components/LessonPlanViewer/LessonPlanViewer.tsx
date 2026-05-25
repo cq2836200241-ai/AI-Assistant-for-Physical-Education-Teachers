@@ -79,12 +79,13 @@ export function LessonPlanViewer({ content, title, grades, zoom = 1, editable = 
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              h2: ({node, ...props}) => {
-                const isReflection = String(props.children).includes('反思');
-                return <h2 className={isReflection ? 'section-reflection' : ''} {...props} />
-              },
-              p: ({node, ...props}) => {
-                return <p {...props} />
+              h2: ({ children }) => {
+                const headingText = String(children);
+                const sectionClasses = [
+                  headingText.includes('课题名称') ? 'section-topic' : '',
+                  headingText.includes('反思') ? 'section-reflection' : '',
+                ].filter(Boolean).join(' ');
+                return <h2 className={sectionClasses}>{children}</h2>
               }
             }}
           >

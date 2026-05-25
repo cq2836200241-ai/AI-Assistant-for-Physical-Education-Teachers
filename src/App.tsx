@@ -53,13 +53,14 @@ function MainApp() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
 
-  // 当右侧功能界面任意一个展开时，自动折叠左侧工具栏
+  // 为需要更多空间的工作区面板自动收起左侧工具栏。
+  // 教案资源入口来自左侧工具栏，打开后应保留用户当前的工具栏状态。
   useEffect(() => {
-    const anyPanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
-    if (anyPanelOpen) {
+    const shouldAutoCollapse = showSchedule || showGameLibrary || showMovement || showLessonPlanV2;
+    if (shouldAutoCollapse) {
       setIsConfigCollapsed(true);
     }
-  }, [showSchedule, showGameLibrary, showMovement, showHistory, showAdopted, showLessonPlanV2]);
+  }, [showSchedule, showGameLibrary, showMovement, showLessonPlanV2]);
 
   // 检测窗口宽度判断是否为移动端
   useEffect(() => {

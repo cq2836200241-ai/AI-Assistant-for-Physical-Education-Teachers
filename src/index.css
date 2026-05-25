@@ -10,6 +10,11 @@
   text-indent: 2em;
 }
 
+/* Align the topic name with the lesson-plan body text */
+.prose h2.section-topic + p {
+  text-indent: 2em;
+}
+
 @theme {
   --color-primary-50: var(--theme-p-50);
   --color-primary-100: var(--theme-p-100);

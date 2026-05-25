@@ -62,7 +62,22 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const displayTitle = previewedHistoryPlan ? previewedHistoryPlan.title : form.courseName;
   const displayGrades = previewedHistoryPlan ? previewedHistoryPlan.grades : form.grades;
   const isWorkspacePanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
-  const shouldShowPreviewActions = !!displayContent && !isGenerating && !isWorkspacePanelOpen;
+  const [isWorkspaceMaskVisible, setIsWorkspaceMaskVisible] = useState(isWorkspacePanelOpen);
+  const shouldRenderWorkspaceMask = isWorkspacePanelOpen || isWorkspaceMaskVisible;
+  const shouldShowPreviewActions = !!displayContent && !isGenerating && !isWorkspacePanelOpen && !shouldRenderWorkspaceMask;
+
+  useEffect(() => {
+    if (isWorkspacePanelOpen) {
+      setIsWorkspaceMaskVisible(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsWorkspaceMaskVisible(false);
+    }, 520);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isWorkspacePanelOpen]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -407,6 +422,16 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
       >
         <LessonPlanWorkbenchV2 onFullscreenChange={onLessonPlanV2FullscreenChange} />
       </motion.div>
+
+      {shouldRenderWorkspaceMask && (
+        <motion.div
+          initial={false}
+          animate={{ opacity: isWorkspacePanelOpen ? 1 : 0 }}
+          transition={{ duration: isWorkspacePanelOpen ? 0 : 0.18 }}
+          className="absolute inset-0 z-10 bg-white"
+          aria-hidden="true"
+        />
+      )}
 
       {isGenerating && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] max-w-md z-50 bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-primary-100 flex flex-col items-center">
