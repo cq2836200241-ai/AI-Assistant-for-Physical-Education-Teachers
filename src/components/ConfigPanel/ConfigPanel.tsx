@@ -166,7 +166,7 @@ export function ConfigPanel({
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full bg-gradient-to-b from-[#0b82ad] via-[#1478c4] to-[#1d63d8] p-3 sm:p-5 rounded-3xl shadow-[0_18px_46px_rgba(6,42,84,0.22)] border border-white/12">
+    <div className="config-panel-theme-gradient config-panel-pro-background relative isolate flex h-full flex-col gap-3 overflow-hidden rounded-3xl border border-white/12 p-3 shadow-[0_18px_46px_rgba(6,42,84,0.22)] sm:p-5">
       <TooltipProvider>
         <Accordion {...({ type: "single", defaultValue: "basic-info" } as any)} className="w-full space-y-3.5">
           
@@ -519,7 +519,6 @@ export function ConfigPanel({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2 text-white/88">
-              {!isGenerating && <span className="hidden text-[12px] font-semibold sm:inline">立即开始</span>}
               <ChevronDown className="h-4 w-4 -rotate-90 transition-transform duration-300 group-hover:translate-x-0.5" />
             </div>
           </Button>

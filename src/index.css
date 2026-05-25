@@ -194,6 +194,48 @@
 }
 
 @layer utilities {
+  .config-panel-theme-gradient {
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--theme-p-600) 88%, #08131d) 0%,
+        color-mix(in srgb, var(--theme-p-500) 68%, var(--theme-s-500)) 54%,
+        color-mix(in srgb, var(--theme-s-500) 82%, var(--theme-p-700)) 100%
+      );
+  }
+
+  .config-panel-frame-surface {
+    background-color: color-mix(in srgb, var(--theme-p-50) 74%, white) !important;
+    border-color: color-mix(in srgb, var(--theme-p-200) 64%, white) !important;
+  }
+
+  .config-panel-pro-background > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .config-panel-pro-background::after {
+    content: "PRO";
+    position: absolute;
+    left: 50%;
+    bottom: 2.4rem;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, #facc15 8%, #38bdf8 44%, #a855f7 76%, #fb7185 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: Inter, var(--font-sans);
+    font-size: clamp(5.5rem, 18vw, 8.6rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.82;
+    opacity: 0.2;
+    transform: translateX(-50%) rotate(-9deg);
+    user-select: none;
+    white-space: nowrap;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
     height: 4px;

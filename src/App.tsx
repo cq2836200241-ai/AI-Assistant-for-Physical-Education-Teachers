@@ -474,7 +474,7 @@ function MainApp() {
                 opacity: isConfigCollapsed ? 0 : 1
               }}
               transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              className="w-[420px] h-full overflow-y-auto pr-2 custom-scrollbar p-0 shrink-0 bg-white shadow-sm border border-slate-200 rounded-2xl flex flex-col"
+              className="config-panel-frame-surface custom-scrollbar flex h-full w-[420px] shrink-0 flex-col overflow-y-auto rounded-2xl border p-0 pr-2 shadow-sm"
             >
                {renderConfigPanel()}
             </motion.div>
@@ -510,7 +510,7 @@ function MainApp() {
         
         {/* 移动端：抽屉式配置面板 */}
         <Sheet open={isMobile && mobileDrawerOpen} onOpenChange={(open) => setMobileDrawerOpen(open)}>
-          <SheetContent side="left" className="w-[90vw] max-w-[420px] p-0 pt-10 bg-gradient-to-b from-primary-600 to-secondary-500">
+          <SheetContent side="left" className="config-panel-theme-gradient w-[90vw] max-w-[420px] p-0 pt-10">
             <SheetTitle className="sr-only">教案配置</SheetTitle>
             <SheetDescription className="sr-only">设置年级、课题、课型等教案参数</SheetDescription>
             <div className="h-full overflow-y-auto p-4 custom-scrollbar">
