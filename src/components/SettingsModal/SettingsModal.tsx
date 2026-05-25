@@ -11,14 +11,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Settings, Eye, EyeOff, Check, LogOut, Lock, DownloadCloud, Bot, Palette, ToggleLeft, User, Sparkles, GraduationCap, RotateCcw, Bell, Code2, BookOpen } from 'lucide-react';
+import { Settings, Eye, EyeOff, Check, Bot, Palette, ToggleLeft, Sparkles, GraduationCap, RotateCcw, Bell, Code2, BookOpen } from 'lucide-react';
 import { ProviderGuide } from './ProviderGuide';
 import { requestNotificationPermission } from '../../utils/classReminder';
-import { getCurrentUser, lockAccount, logout } from '../../lib/session';
-import { usePWAInstall } from '@/src/hooks/usePWAInstall';
 import { EDUCATION_LEVELS, getGradesByLevel } from '../../constants/education';
 
-type SettingsTab = 'ai' | 'theme' | 'education' | 'features' | 'account' | 'developer' | 'guide';
+type SettingsTab = 'ai' | 'theme' | 'education' | 'features' | 'developer' | 'guide';
 
 interface TabItem {
   id: SettingsTab;
@@ -31,7 +29,6 @@ const TABS: TabItem[] = [
   { id: 'theme', label: '外观主题', icon: <Palette className="w-4 h-4" /> },
   { id: 'education', label: '班级设置', icon: <GraduationCap className="w-4 h-4" /> },
   { id: 'features', label: '功能开关', icon: <ToggleLeft className="w-4 h-4" /> },
-  { id: 'account', label: '账户', icon: <User className="w-4 h-4" /> },
   { id: 'developer', label: '开发者', icon: <Code2 className="w-4 h-4" /> },
   { id: 'guide', label: '使用指南', icon: <BookOpen className="w-4 h-4" /> },
 ];
@@ -47,10 +44,7 @@ export function SettingsModal({ open, onOpenChange }: { open?: boolean; onOpenCh
   const [showKey, setShowKey] = useState(false);
   const [isTestSuccess, setIsTestSuccess] = useState<boolean | null>(null);
   const [providersExpanded, setProvidersExpanded] = useState(false);
-  const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('ai');
-  const { isInstallable, installPWA } = usePWAInstall();
-  const username = getCurrentUser() || '用户';
 
   const activeProvider = providers[activeProviderId];
 
@@ -388,7 +382,7 @@ export function SettingsModal({ open, onOpenChange }: { open?: boolean; onOpenCh
                   <p className="text-xs text-slate-400 mt-0.5">开关应用的各种功能特性。</p>
                 </div>
 
-                <div className="bg-slate-50 rounded-xl border border-slate-100 divide-y divide-slate-200">
+                  <div className="bg-slate-50 rounded-xl border border-slate-100 divide-y divide-slate-200">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex-1 min-w-0 pr-4">
                       <h4 className="font-semibold text-slate-800 text-sm">自动雾化已结课程</h4>
@@ -436,84 +430,7 @@ export function SettingsModal({ open, onOpenChange }: { open?: boolean; onOpenCh
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* 账户 */}
-            {activeTab === 'account' && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                    <User className="w-4 h-4 text-primary-500" />
-                    账户管理
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">管理你的账户和登录状态。</p>
-                </div>
-
-                <div className="bg-slate-50 rounded-xl border border-slate-100 p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-secondary-400 flex items-center justify-center text-white text-xl font-bold shadow-sm shrink-0">
-                      {username.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-base font-semibold text-slate-800">{username}</p>
-                      <p className="text-xs text-slate-400">当前登录账户</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200">
-                    {isInstallable && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-slate-200 text-slate-600"
-                        onClick={() => { installPWA(); }}
-                      >
-                        <DownloadCloud className="w-3.5 h-3.5" />
-                        安装应用
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs gap-1.5 border-slate-200 text-slate-600"
-                        onClick={async () => { await lockAccount(); window.location.reload(); }}
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      锁定
-                    </Button>
-                    {!confirmLogout ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 border-slate-200 text-red-500 hover:bg-red-50 hover:text-red-600"
-                        onClick={() => setConfirmLogout(true)}
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        退出登录
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs text-slate-500"
-                          onClick={() => setConfirmLogout(false)}
-                        >
-                          取消
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="h-8 text-xs"
-                          onClick={logout}
-                        >
-                          确认退出
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             )}
 

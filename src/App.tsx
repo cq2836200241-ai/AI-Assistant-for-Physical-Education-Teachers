@@ -5,11 +5,12 @@ import { buildPrompt } from './utils/promptBuilder';
 import { ConfigPanel } from './components/ConfigPanel/ConfigPanel';
 import { PreviewPanel } from './components/PreviewPanel/PreviewPanel';
 import { SettingsModal } from './components/SettingsModal/SettingsModal';
+import { AccountModal } from './components/AccountModal/AccountModal';
 import { DesktopAuthTitleBar, DesktopTitleBar } from './components/DesktopTitleBar/DesktopTitleBar';
 import { ClassReminderWatcher } from './components/ClassReminderWatcher/ClassReminderWatcher';
 import { AuthWrapper, saveToHistory } from './components/AuthScreen/AuthWrapper';
 import { UserMenu } from './components/UserMenu/UserMenu';
-import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, BookmarkCheck, History, LibraryBig, FileText } from 'lucide-react';
+import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, LibraryBig, FileText, MoreHorizontal, Settings, User } from 'lucide-react';
 import Lottie from 'lottie-react';
 import logoAnimation from './assets/animations/Awesome.json';
 import { initializeSeedDataV2 } from './utils/lessonPlanStorageV2';
@@ -21,6 +22,11 @@ import { Button } from '@/components/ui/button';
 import { Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 const isDesktop =
   import.meta.env.VITE_APP_PLATFORM === 'desktop' ||
@@ -42,6 +48,7 @@ function MainApp() {
   const [showLessonPlanV2, setShowLessonPlanV2] = useState(false);
   const [lessonPlanV2FullscreenActive, setLessonPlanV2FullscreenActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   // 当右侧功能界面任意一个展开时，自动折叠左侧工具栏
@@ -116,6 +123,7 @@ function MainApp() {
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
     store.setGenerationProgress(0);
+    store.setGenerationStatus('');
 
     const { systemPrompt, userPrompt } = buildPrompt(store.form, isRegeneration, store.educationLevel);
 
@@ -137,8 +145,9 @@ function MainApp() {
       });
 
       if (!useAppStore.getState().isGenerating) {
-         // User stopped generation, don't save to history or trigger confetti
-         store.setCurrentPlanContent(prev => prev + '\n\n*(生成已中止)*');
+         // Keep currentPlanContent empty so the start button can reappear after stopping.
+         store.setCurrentPlanContent('');
+         store.setGenerationStatus('生成已中止');
          return;
       }
       
@@ -191,7 +200,13 @@ function MainApp() {
 
   const renderConfigPanel = () => (
     <div className="w-full h-full">
-      <ConfigPanel onGenerate={handleGenerate} />
+      <ConfigPanel
+        onGenerate={handleGenerate}
+        showAdopted={showAdopted}
+        showHistory={showHistory}
+        onToggleAdopted={handleToggleAdopted}
+        onToggleHistory={handleToggleHistory}
+      />
     </div>
   );
 
@@ -208,6 +223,7 @@ function MainApp() {
   const handleGoHome = () => {
     closeAllPanels();
     setSettingsOpen(false);
+    setAccountOpen(false);
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
     setIsConfigCollapsed(false);
@@ -277,142 +293,135 @@ function MainApp() {
   };
 
   const webHeader = (
-      <header className="shrink-0 h-[64px] bg-gradient-to-r from-primary-500 to-secondary-500 border-b border-white/20 flex items-center justify-between px-4 sm:px-6 z-30 shadow-md">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-2.5 text-white tracking-tight sm:pr-4 sm:border-r sm:border-white/20 h-8">
-            <div className="w-20 h-20 sm:w-20 sm:h-20 flex items-center justify-center overflow-hidden -ml-4 sm:-ml-6">
-              <Lottie animationData={logoAnimation} loop className="w-full h-full" />
-            </div>
-            
+    <header className="z-30 flex h-[64px] shrink-0 items-center justify-between border-b border-white/20 bg-gradient-to-r from-primary-500 to-secondary-500 px-4 shadow-md sm:px-6">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex h-8 items-center gap-2 text-white tracking-tight sm:border-r sm:border-white/20 sm:pr-4">
+          <div className="-ml-4 flex h-20 w-20 items-center justify-center overflow-hidden sm:-ml-6 sm:h-20 sm:w-20">
+            <Lottie animationData={logoAnimation} loop className="h-full w-full" />
           </div>
+        </div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* 移动端：配置按钮 */}
-            {isMobile && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-[13px] h-8 sm:h-9 px-2.5 rounded-full border-white/30 bg-white/10 hover:bg-white/20 text-white transition-all"
-                onClick={() => setMobileDrawerOpen(true)}
-              >
-                <Menu className="h-4 w-4" />
-                <span className="text-[13px] font-bold">配置</span>
-              </Button>
-            )}
-            
+        <div className="flex items-center gap-1 sm:gap-2">
+          {isMobile && (
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 text-[12px] sm:text-[13px] h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border-white/25 shadow-none bg-transparent hover:bg-white/15 hover:border-white/40 transition-all text-white/90"
-              onClick={handleGoHome}
+              className="h-8 rounded-full border-white/30 bg-white/10 px-2.5 text-[13px] text-white transition-all hover:bg-white/20 sm:h-9"
+              onClick={() => setMobileDrawerOpen(true)}
             >
-              <Home className="h-4 w-4 sm:h-5 sm:w-5 text-white/90" />
-              <span className="hidden sm:inline text-[16px]">主页</span>
+              <Menu className="h-4 w-4" />
+              <span className="text-[13px] font-bold">配置</span>
             </Button>
-            
-            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-          </div>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full border-white/25 bg-transparent px-2.5 text-[12px] text-white/90 shadow-none transition-all hover:border-white/40 hover:bg-white/15 sm:h-9 sm:px-3 sm:text-[13px]"
+            onClick={handleGoHome}
+          >
+            <Home className="h-4 w-4 text-white/90 sm:h-5 sm:w-5" />
+            <span className="hidden text-[16px] sm:inline">主页</span>
+          </Button>
+
+          <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+          <AccountModal open={accountOpen} onOpenChange={setAccountOpen} />
         </div>
-        
-        <div className="flex items-center gap-1 sm:gap-2">
-          {/* 运动拆解 按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleGameLibrary}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showGameLibrary
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
+      </div>
+
+      <div className="flex items-center gap-1 sm:gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleGameLibrary}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-[12px] font-bold shadow-none transition-all sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+            showGameLibrary
+              ? 'border-white/60 bg-white/20 text-white shadow-sm'
+              : 'border-white/25 bg-transparent text-white/90 hover:border-white/40 hover:bg-white/15'
+          }`}
+        >
+          <LibraryBig className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">游戏库</span>
+          {showGameLibrary ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleMovement}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-[12px] font-bold shadow-none transition-all sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+            showMovement
+              ? 'border-white/60 bg-white/20 text-white shadow-sm'
+              : 'border-white/25 bg-transparent text-white/90 hover:border-white/40 hover:bg-white/15'
+          }`}
+        >
+          <Activity className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">运动拆解</span>
+          {showMovement ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleSchedule}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-[12px] font-bold shadow-none transition-all sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+            showSchedule
+              ? 'border-white/60 bg-white/20 text-white shadow-sm'
+              : 'border-white/25 bg-transparent text-white/90 hover:border-white/40 hover:bg-white/15'
+          }`}
+        >
+          <Calendar className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">智能课表</span>
+          {showSchedule ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleLessonPlanV2}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-[12px] font-bold shadow-none transition-all sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+            showLessonPlanV2
+              ? 'border-white/60 bg-white/20 text-white shadow-sm'
+              : 'border-white/25 bg-transparent text-white/90 hover:border-white/40 hover:bg-white/15'
+          }`}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">教案生成</span>
+          {showLessonPlanV2 ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
+        </Button>
+
+        <Popover>
+          <PopoverTrigger
+            className="flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full border border-white/25 bg-transparent px-2 text-[12px] font-bold text-white/90 shadow-none transition-all hover:border-white/40 hover:bg-white/15 hover:text-white aria-expanded:border-white/60 aria-expanded:bg-white/20 aria-expanded:text-white sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px]"
           >
-            <LibraryBig className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">游戏库</span>
-            {showGameLibrary ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleMovement}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showMovement
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
+            <MoreHorizontal className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">更多</span>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            sideOffset={6}
+            className="w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
           >
-            <Activity className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">运动拆解</span>
-            {showMovement ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-
-          {/* 智能课表 按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleSchedule}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showSchedule
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">智能课表</span>
-            {showSchedule ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-
-          {/* 已上教案记录 按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleAdopted}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showAdopted
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
-          >
-            <BookmarkCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">已上教案</span>
-            {showAdopted ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-
-          {/* 教案记录库 按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleHistory}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showHistory
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
-          >
-            <History className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">教案库</span>
-            {showHistory ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-
-          {/* 教案生成 按钮 */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleLessonPlanV2}
-            className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[12px] sm:text-[13px] font-bold flex items-center gap-1 sm:gap-1.5 transition-all shadow-none ${
-              showLessonPlanV2
-                ? 'bg-white/20 border-white/60 text-white shadow-sm'
-                : 'bg-transparent border-white/25 text-white/90 hover:bg-white/15 hover:border-white/40'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">教案生成</span>
-            {showLessonPlanV2 ? <ChevronUp className="w-3 h-3 opacity-70" /> : <ChevronDown className="w-3 h-3 opacity-70" />}
-          </Button>
-        </div>
-
-
-      </header>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings className="h-4 w-4 text-slate-500" />
+              设置
+            </button>
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+              onClick={() => setAccountOpen(true)}
+            >
+              <User className="h-4 w-4 text-slate-500" />
+              账户
+            </button>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </header>
   );
 
   return (
@@ -423,18 +432,16 @@ function MainApp() {
           onOpenMobileDrawer={() => setMobileDrawerOpen(true)}
           settingsOpen={settingsOpen}
           onSettingsOpenChange={setSettingsOpen}
+          accountOpen={accountOpen}
+          onAccountOpenChange={setAccountOpen}
           onGoHome={handleGoHome}
           showGameLibrary={showGameLibrary}
           showMovement={showMovement}
           showSchedule={showSchedule}
-          showHistory={showHistory}
-          showAdopted={showAdopted}
           showLessonPlanV2={showLessonPlanV2}
           onToggleGameLibrary={handleToggleGameLibrary}
           onToggleMovement={handleToggleMovement}
           onToggleSchedule={handleToggleSchedule}
-          onToggleHistory={handleToggleHistory}
-          onToggleAdopted={handleToggleAdopted}
           onToggleLessonPlanV2={handleToggleLessonPlanV2}
         />
       ) : (

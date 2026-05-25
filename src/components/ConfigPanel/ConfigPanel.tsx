@@ -1,6 +1,5 @@
-import { FormState, useAppStore } from '../../store/appStore';
+import { useAppStore } from '../../store/appStore';
 import { Toggle } from '@/components/ui/toggle';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { motion } from 'motion/react';
-import { Play, Sparkles, Dices, Layers, Timer, Tag, Loader2, Sliders, Sun, CloudRain } from 'lucide-react';
+import { Play, Dices, Layers, Tag, Loader2, Sliders, Sun, CloudRain, ChevronDown, ChevronUp, BookmarkCheck, History } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAIProvider } from '../../hooks/useAIProvider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -22,11 +21,41 @@ const ABILITY_LEVELS = [
   { id: '提高班', icon: '🔴', desc: '增加拓展性练习与体能挑战' }
 ];
 
-export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: boolean) => void }) {
+const accordionItemClassName =
+  'overflow-hidden rounded-[28px] border border-white/14 bg-white/12 shadow-[0_10px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300 hover:border-white/24 hover:bg-white/15 data-[state=open]:bg-white/16 data-[state=open]:shadow-[0_14px_34px_rgba(4,44,85,0.2)] data-[state=open]:hover:border-white/30';
+
+const accordionTriggerClassName =
+  'rounded-[28px] border border-transparent bg-transparent px-4 py-3.5 text-left text-white hover:no-underline hover:bg-white/8 data-[state=open]:rounded-b-[22px] data-[state=open]:border-white/0 data-[state=open]:bg-white/10';
+
+const accordionPanelClassName =
+  'px-4 pb-4 pt-2 space-y-4 rounded-[24px] border-t border-white/14 bg-white/94 text-slate-900';
+
+const panelActionCardBaseClassName =
+  'group flex w-full items-center justify-between gap-3 rounded-[26px] border px-4 py-4 text-left shadow-[0_12px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300';
+
+const panelActionCardIconBaseClassName =
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300';
+
+type ConfigPanelProps = {
+  onGenerate: (isRegeneration?: boolean) => void;
+  showAdopted?: boolean;
+  showHistory?: boolean;
+  onToggleAdopted?: () => void;
+  onToggleHistory?: () => void;
+};
+
+export function ConfigPanel({
+  onGenerate,
+  showAdopted = false,
+  showHistory = false,
+  onToggleAdopted,
+  onToggleHistory,
+}: ConfigPanelProps) {
   const { form, setForm, isGenerating, history, currentPlanContent, educationLevel } = useAppStore();
   const gradeOptions = getGradesByLevel(educationLevel);
   const [isGeneratingTopic, setIsGeneratingTopic] = useState(false);
   const [isGeneratingFocus, setIsGeneratingFocus] = useState(false);
+  const [resourceExpanded, setResourceExpanded] = useState(false);
   
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
@@ -80,6 +109,12 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
     };
   }, [showPreviewModal, onGenerate]);
 
+  useEffect(() => {
+    if (showAdopted || showHistory) {
+      setResourceExpanded(true);
+    }
+  }, [showAdopted, showHistory]);
+
   const handleCancel = () => {
     setShowPreviewModal(false);
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -131,19 +166,27 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full bg-gradient-to-b from-primary-600 to-secondary-500 p-3 sm:p-5 rounded-3xl shadow-xl border border-white/10">
+    <div className="flex flex-col gap-3 h-full bg-gradient-to-b from-[#0b82ad] via-[#1478c4] to-[#1d63d8] p-3 sm:p-5 rounded-3xl shadow-[0_18px_46px_rgba(6,42,84,0.22)] border border-white/12">
       <TooltipProvider>
-        <Accordion {...({ type: "single", defaultValue: "basic-info" } as any)} className="w-full space-y-3">
+        <Accordion {...({ type: "single", defaultValue: "basic-info" } as any)} className="w-full space-y-3.5">
           
           {/* Section 1: 年级与基础信息 */}
-          <AccordionItem value="basic-info" className="border border-slate-100 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden data-[state=open]:ring-1 data-[state=open]:ring-primary-600/10 transition-all">
-            <AccordionTrigger className="hover:no-underline group hover:bg-transparent data-[state=open]:hover:bg-slate-50/50 px-4 py-3.5 data-[state=open]:bg-slate-50/50 transition-all duration-300">
-              <div className="text-[17px] font-bold text-slate-700 flex items-center gap-2 transition-all duration-300 transform origin-left group-hover:scale-105">
-                <Layers className="w-5 h-5 text-primary-600 transition-transform duration-300 group-hover:scale-110" /> 
-                年级与基础设置 <span className="text-red-500 text-[12px]">*</span>
+          <AccordionItem value="basic-info" className={accordionItemClassName}>
+            <AccordionTrigger className={accordionTriggerClassName}>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/18 bg-white/13 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 group-hover/accordion-trigger:scale-105 group-hover/accordion-trigger:bg-white/18 group-aria-expanded/accordion-trigger:border-white/28 group-aria-expanded/accordion-trigger:bg-white/18">
+                  <Layers className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[16px] font-bold text-white sm:text-[17px]">
+                    <span>年级与基础设置</span>
+                    <span className="text-[12px] text-emerald-200">*</span>
+                  </div>
+                  <div className="text-[12px] text-white/72">设置年级、能力、课题与基础课堂信息</div>
+                </div>
               </div>
             </AccordionTrigger>
-             <AccordionContent className="px-4 pb-4 pt-1 space-y-4">
+             <AccordionContent className={accordionPanelClassName}>
                
                <div className="space-y-2 mt-2">
                  <Label className="text-[14px] font-bold text-slate-500">年级选择 <span className="text-red-500">*</span></Label>
@@ -258,14 +301,19 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
            </AccordionItem>
 
           {/* Section 3: 风格与目标 */}
-          <AccordionItem value="teaching-style" className="border border-slate-100 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden data-[state=open]:ring-1 data-[state=open]:ring-primary-600/10 transition-all">
-            <AccordionTrigger className="hover:no-underline group hover:bg-transparent data-[state=open]:hover:bg-slate-50/50 px-4 py-3.5 data-[state=open]:bg-slate-50/50 transition-all duration-300">
-              <div className="text-[17px] font-bold text-slate-700 flex items-center gap-2 transition-all duration-300 transform origin-left group-hover:scale-105"> 
-                <Tag className="w-5 h-5 text-primary-600 transition-transform duration-300 group-hover:scale-110" />
-                教案风格与目标
+          <AccordionItem value="teaching-style" className={accordionItemClassName}>
+            <AccordionTrigger className={accordionTriggerClassName}>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/18 bg-white/13 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 group-hover/accordion-trigger:scale-105 group-hover/accordion-trigger:bg-white/18 group-aria-expanded/accordion-trigger:border-white/28 group-aria-expanded/accordion-trigger:bg-white/18">
+                  <Tag className="h-4.5 w-4.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[16px] font-bold text-white sm:text-[17px]">教案风格与目标</div>
+                  <div className="text-[12px] text-white/72">控制课型、重难点和教学导向</div>
+                </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 pt-1 space-y-4">
+            <AccordionContent className={accordionPanelClassName}>
               
               <div className="space-y-1.5 mt-2">
                 <Label className="text-[15px] text-slate-500 block mb-1">课型</Label>
@@ -337,23 +385,26 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
           </AccordionItem>
 
           {/* Section 4: 专业教案细节定制 */}
-          <AccordionItem value="professional-details" className="border border-slate-100 bg-white rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden data-[state=open]:ring-1 data-[state=open]:ring-primary-600/10 transition-all">
-            <AccordionTrigger className="hover:no-underline group hover:bg-transparent data-[state=open]:hover:bg-slate-50/50 px-4 py-3.5 data-[state=open]:bg-slate-50/50 transition-all duration-300">
-              <div className="flex items-center justify-between w-full pr-2">
-                <div className="text-[17px] font-bold text-slate-700 flex items-center gap-2 transition-all duration-300 transform origin-left group-hover:scale-105"> 
-                  <Sliders className="w-5 h-5 text-primary-600 transition-transform duration-300 group-hover:scale-110" />
-                  专业教案细节定制
+          <AccordionItem value="professional-details" className={accordionItemClassName}>
+            <AccordionTrigger className={accordionTriggerClassName}>
+              <div className="flex min-w-0 w-full items-center gap-3 pr-2">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/18 bg-white/13 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 group-hover/accordion-trigger:scale-105 group-hover/accordion-trigger:bg-white/18 group-aria-expanded/accordion-trigger:border-white/28 group-aria-expanded/accordion-trigger:bg-white/18">
+                  <Sliders className="h-4.5 w-4.5" />
                 </div>
-                <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} className="ml-auto mr-2">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[16px] font-bold text-white sm:text-[17px]">专业教案细节定制</div>
+                  <div className="text-[12px] text-white/72">按需开启课时、天气和板块定制</div>
+                </div>
+                <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} className="ml-auto">
                   <Switch 
-                    className="scale-90 data-[state=checked]:bg-[#60d621]"
+                    className="scale-90 data-[state=checked]:bg-[#35c84a]"
                     checked={form.customDetailsEnabled ?? false} 
                     onCheckedChange={v => setForm({customDetailsEnabled: v})} 
                   />
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4 pt-4 space-y-4">
+            <AccordionContent className={accordionPanelClassName}>
               <div className={`space-y-3 transition-opacity duration-300 ${!form.customDetailsEnabled ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                 <Label className="text-[14px] font-bold text-slate-700 block">上课天气情况</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -427,44 +478,121 @@ export function ConfigPanel({ onGenerate }: { onGenerate: (isRegeneration?: bool
         </Accordion>
       </TooltipProvider>
 
-      {/* 生成控制按钮 */}
       {!currentPlanContent && (
         <div className="mt-2 shrink-0">
           <Button 
              size="lg" 
-             className="w-full text-[23px] h-auto py-5 shadow-lg transition-all duration-300 rounded-2xl border-none font-extrabold bg-[#60d621] hover:bg-[#60d621] hover:scale-[1.02] text-[#fffbfb] group tracking-wide focus:ring-4 focus:ring-[#60d621]/50 disabled:bg-[#60d621] disabled:text-[#fffbfb] disabled:opacity-100"
+             className={`${panelActionCardBaseClassName} h-auto border-emerald-200/35 bg-linear-to-r from-[#35c84a]/95 via-[#2fbd44]/95 to-[#239c35]/95 text-white hover:-translate-y-0.5 hover:border-emerald-100/60 hover:shadow-[0_18px_42px_rgba(35,156,53,0.28)] disabled:translate-y-0 disabled:border-emerald-200/35 disabled:bg-linear-to-r disabled:from-[#35c84a]/95 disabled:via-[#2fbd44]/95 disabled:to-[#239c35]/95 disabled:text-white disabled:opacity-100`}
              onClick={handleStartProcess}
              disabled={isGenerating || form.grades.length === 0 || !form.courseName}
           >
-            {isGenerating ? (
-              <div className="flex items-center justify-center">
-                {"正在制作...".split('').map((char, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{
-                      duration: 0.8,
-                      repeat: Infinity,
-                      delay: i * 0.1,
-                      ease: "easeInOut"
-                    }}
-                    className="inline-block"
-                  >
-                    {char}
-                  </motion.span>
-                ))}
+            <div className="flex min-w-0 items-center gap-3">
+              <div className={`${panelActionCardIconBaseClassName} border-white/22 bg-white/18 text-white group-hover:scale-105 group-hover:bg-white/24`}>
+                <Play className="h-5 w-5 fill-current transition-transform duration-300 group-hover:scale-110" />
               </div>
-            ) : (
-              <div className="flex items-center gap-2 text-[22px] transition-all duration-300 font-[Arial] no-underline">
-                <Play className="fill-current w-5 h-5 transition-transform duration-300 group-hover:scale-125" /> 开始制作教案
+              <div className="min-w-0">
+                <div className="text-[17px] font-extrabold tracking-[0.01em] sm:text-[18px]">
+                  {isGenerating ? (
+                    <div className="flex items-center gap-[1px]">
+                      {"正在制作教案...".split('').map((char, i) => (
+                        <motion.span
+                          key={i}
+                          initial={{ scale: 1 }}
+                          animate={{ scale: [1, 1.18, 1] }}
+                          transition={{
+                            duration: 0.8,
+                            repeat: Infinity,
+                            delay: i * 0.08,
+                            ease: "easeInOut"
+                          }}
+                          className="inline-block"
+                        >
+                          {char}
+                        </motion.span>
+                      ))}
+                    </div>
+                  ) : (
+                    '开始制作教案'
+                  )}
+                </div>
+                <div className="text-[12px] text-white/82">生成新的体育教案，并进入预览确认流程</div>
               </div>
-            )}
+            </div>
+            <div className="flex shrink-0 items-center gap-2 text-white/88">
+              {!isGenerating && <span className="hidden text-[12px] font-semibold sm:inline">立即开始</span>}
+              <ChevronDown className="h-4 w-4 -rotate-90 transition-transform duration-300 group-hover:translate-x-0.5" />
+            </div>
           </Button>
         </div>
       )}
 
-      {/* 预览配置 Modal */}
+      <div className="shrink-0 overflow-hidden rounded-[26px] border border-white/16 bg-white/12 shadow-[0_12px_28px_rgba(4,44,85,0.16)] backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setResourceExpanded((prev) => !prev)}
+          className={`${panelActionCardBaseClassName} rounded-none border-0 bg-transparent px-4 py-4 text-white shadow-none hover:bg-white/8`}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`${panelActionCardIconBaseClassName} border-white/18 bg-white/13 text-white group-hover:scale-105 group-hover:bg-white/18`}>
+              <History className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[16px] font-bold text-white">教案资源</div>
+              <div className="text-[12px] text-white/75">展开查看已上教案和教案库</div>
+            </div>
+          </div>
+          {resourceExpanded ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-white/85" />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-white/85" />
+          )}
+        </button>
+
+        {resourceExpanded && (
+          <div className="border-t border-white/14 px-3 pb-3 pt-3">
+            <div className="grid grid-cols-1 gap-2 rounded-[22px] bg-white/8 p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onToggleAdopted}
+                className={`h-auto justify-start rounded-2xl border px-3 py-3 text-left transition-all hover:bg-white/15 ${
+                  showAdopted
+                    ? 'border-white/40 bg-white/20 text-white'
+                    : 'border-white/10 bg-white/5 text-white/85'
+                }`}
+              >
+                <div className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <BookmarkCheck className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-bold">已上教案</div>
+                  <div className="text-[12px] text-current/75">打开当前已上教案界面</div>
+                </div>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onToggleHistory}
+                className={`h-auto justify-start rounded-2xl border px-3 py-3 text-left transition-all hover:bg-white/15 ${
+                  showHistory
+                    ? 'border-white/40 bg-white/20 text-white'
+                    : 'border-white/10 bg-white/5 text-white/85'
+                }`}
+              >
+                <div className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <History className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-bold">教案库</div>
+                  <div className="text-[12px] text-current/75">打开当前教案库界面</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <Dialog open={showPreviewModal} onOpenChange={(open) => {
         if (!open) handleCancel();
       }}>
