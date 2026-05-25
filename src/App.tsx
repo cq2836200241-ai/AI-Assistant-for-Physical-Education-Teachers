@@ -7,6 +7,7 @@ import { PreviewPanel } from './components/PreviewPanel/PreviewPanel';
 import { SettingsModal } from './components/SettingsModal/SettingsModal';
 import { AccountModal } from './components/AccountModal/AccountModal';
 import { DesktopAuthTitleBar, DesktopTitleBar } from './components/DesktopTitleBar/DesktopTitleBar';
+import { TopBarMeteorBackdrop } from './components/TopBarMeteorBackdrop/TopBarMeteorBackdrop';
 import { ClassReminderWatcher } from './components/ClassReminderWatcher/ClassReminderWatcher';
 import { AuthWrapper, saveToHistory } from './components/AuthScreen/AuthWrapper';
 import { UserMenu } from './components/UserMenu/UserMenu';
@@ -293,8 +294,9 @@ function MainApp() {
   };
 
   const webHeader = (
-    <header className="z-30 flex h-[64px] shrink-0 items-center justify-between border-b border-white/20 bg-gradient-to-r from-primary-500 to-secondary-500 px-4 shadow-md sm:px-6">
-      <div className="flex items-center gap-2 sm:gap-4">
+    <header className="topbar-meteor-surface z-30 flex h-[64px] shrink-0 items-center justify-between border-b border-white/20 px-4 shadow-md sm:px-6">
+      <TopBarMeteorBackdrop />
+      <div className="relative z-[1] flex items-center gap-2 sm:gap-4">
         <div className="flex h-8 items-center gap-2 text-white tracking-tight sm:border-r sm:border-white/20 sm:pr-4">
           <div className="-ml-4 flex h-20 w-20 items-center justify-center overflow-hidden sm:-ml-6 sm:h-20 sm:w-20">
             <Lottie animationData={logoAnimation} loop className="h-full w-full" />
@@ -329,7 +331,7 @@ function MainApp() {
         </div>
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="relative z-[1] flex items-center gap-1 sm:gap-2">
         <Button
           variant="outline"
           size="sm"

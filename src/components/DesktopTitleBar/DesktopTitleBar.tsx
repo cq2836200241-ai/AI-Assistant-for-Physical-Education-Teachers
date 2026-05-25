@@ -13,6 +13,7 @@ import {
 import logoAnimation from '../../assets/animations/Awesome.json';
 import { SettingsModal } from '../SettingsModal/SettingsModal';
 import { AccountModal } from '../AccountModal/AccountModal';
+import { TopBarMeteorBackdrop } from '../TopBarMeteorBackdrop/TopBarMeteorBackdrop';
 import { Button } from '@/components/ui/button';
 import { WindowControls } from './WindowControls';
 import {
@@ -53,11 +54,12 @@ export function DesktopAuthTitleBar() {
 
   return (
     <header
-      className="app-region-drag z-30 flex shrink-0 items-center justify-end border-b border-white/20 bg-gradient-to-r from-primary-500 to-secondary-500 px-3 shadow-md sm:px-4"
+      className="app-region-drag topbar-meteor-surface z-30 flex shrink-0 items-center justify-end border-b border-white/20 px-3 shadow-md sm:px-4"
       style={{ height: 'var(--app-titlebar-row1-height)' }}
       onDoubleClick={handleTitleBarDoubleClick}
     >
-      <div className="app-region-no-drag" onDoubleClick={(e) => e.stopPropagation()}>
+      <TopBarMeteorBackdrop />
+      <div className="app-region-no-drag relative z-[1]" onDoubleClick={(e) => e.stopPropagation()}>
         <WindowControls />
       </div>
     </header>
@@ -87,12 +89,13 @@ export function DesktopTitleBar({
 
   return (
     <header
-      className="app-region-drag z-30 flex shrink-0 items-center border-b border-white/20 bg-gradient-to-r from-primary-500 to-secondary-500 shadow-md"
+      className="app-region-drag topbar-meteor-surface z-30 flex shrink-0 items-center border-b border-white/20 shadow-md"
       style={{ height: 'var(--app-titlebar-row1-height)' }}
       onDoubleClick={handleTitleBarDoubleClick}
     >
+      <TopBarMeteorBackdrop />
       <div
-        className="app-region-no-drag flex min-w-0 items-center gap-1 pl-3 sm:gap-2 sm:pl-6"
+        className="app-region-no-drag relative z-[1] flex min-w-0 items-center gap-1 pl-3 sm:gap-2 sm:pl-6"
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center gap-2 text-white sm:border-r sm:border-white/20 sm:pr-3">
@@ -127,10 +130,10 @@ export function DesktopTitleBar({
       <SettingsModal open={settingsOpen} onOpenChange={onSettingsOpenChange} />
       <AccountModal open={accountOpen} onOpenChange={onAccountOpenChange} />
 
-      <div className="flex-1 min-w-0" />
+      <div className="relative z-[1] flex-1 min-w-0" />
 
       <div
-        className="app-region-no-drag flex h-full items-center"
+        className="app-region-no-drag relative z-[1] flex h-full items-center"
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-1 sm:gap-1.5">
