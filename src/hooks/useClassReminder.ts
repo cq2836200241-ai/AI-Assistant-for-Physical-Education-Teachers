@@ -13,6 +13,7 @@ const CHECK_INTERVAL_MS = 30_000;
 export function useClassReminder() {
   const classReminderEnabled = useAppStore((state) => state.classReminderEnabled);
   const courseData = useAppStore((state) => state.courseData);
+  const timetableSlots = useAppStore((state) => state.timetableSlots);
   const notifiedRef = useRef<Set<string>>(loadNotifiedKeys());
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function useClassReminder() {
         if (Notification.permission !== 'granted') return;
       }
 
-      const due = getDueReminders(courseData);
+      const due = getDueReminders(courseData, timetableSlots);
       for (const reminder of due) {
         if (notifiedRef.current.has(reminder.key)) continue;
         await showClassReminderNotification(reminder);
@@ -42,5 +43,5 @@ export function useClassReminder() {
     runCheck();
     const timer = window.setInterval(runCheck, CHECK_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [classReminderEnabled, courseData]);
+  }, [classReminderEnabled, courseData, timetableSlots]);
 }

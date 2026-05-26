@@ -237,8 +237,6 @@ export function SettingsModal({ open, onOpenChange }: { open?: boolean; onOpenCh
                     { id: 'sunset', label: '夕阳暖日', sub: 'Sunset', from: 'from-[#ea580c]', to: 'to-[#f43f5e]', border: 'border-[#ea580c]' },
                     { id: 'cyan-blue', label: '青蓝之翼', sub: 'Cyan Blue', from: 'from-cyan-500', to: 'to-blue-600', border: 'border-[#06b6d4]' },
                     { id: 'minimal', label: '极简纯粹', sub: 'Minimal', from: 'from-[#0f172a]', to: 'to-[#334155]', border: 'border-[#0f172a]' },
-                    { id: 'insight-grid', label: '智穹蓝', sub: 'Insight Grid', from: 'from-[#07111f]', to: 'to-[#38bdf8]', border: 'border-[#38bdf8]' },
-                    { id: 'aurora', label: '暗夜极光', sub: 'Aurora Noir', from: 'from-[#1a1a2e]', to: 'to-[#e94560]', border: 'border-[#7c3aed]' },
                   ].map((t) => (
                     <div
                       key={t.id}
@@ -246,31 +244,10 @@ export function SettingsModal({ open, onOpenChange }: { open?: boolean; onOpenCh
                       className={`
                         border-2 rounded-xl p-3 cursor-pointer transition-all relative overflow-hidden
                         ${theme === t.id ? `${t.border} shadow-md` : 'border-slate-200 hover:border-slate-300'}
-                        ${t.id === 'aurora' && theme === 'aurora' ? 'ring-2 ring-[#7c3aed] ring-offset-2' : ''}
-                        ${t.id === 'insight-grid' && theme === 'insight-grid' ? 'ring-2 ring-[#38bdf8] ring-offset-2 ring-offset-[#07111f]' : ''}
                       `}
                     >
-                      <div className={`h-16 w-full rounded-lg bg-gradient-to-br ${t.from} ${t.to} mb-2.5 relative overflow-hidden`}>
-                        {t.id === 'insight-grid' && (
-                          <>
-                            <div
-                              className="absolute inset-0 opacity-40"
-                              style={{
-                                backgroundImage:
-                                  'linear-gradient(rgba(191,208,225,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(191,208,225,0.3) 1px, transparent 1px)',
-                                backgroundSize: '14px 14px',
-                              }}
-                            />
-                            <div className="absolute -right-4 -top-4 h-12 w-12 rounded-full bg-cyan-300/30 blur-xl" />
-                            <div className="absolute bottom-0 left-0 right-0 h-[3px] insight-grid-stripe" />
-                          </>
-                        )}
-                        {/* 暗夜极光主题的底部极光条纹预览 */}
-                        {t.id === 'aurora' && (
-                          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#e94560] via-[#7c3aed] to-[#0f3460]" />
-                        )}
-                      </div>
-                      <h4 className={`font-bold text-center text-sm ${t.id === 'aurora' ? 'text-[#c4b5fd]' : t.id === 'insight-grid' ? 'text-[#d6f2ff]' : 'text-slate-800'}`}>{t.label}</h4>
+                      <div className={`h-16 w-full rounded-lg bg-gradient-to-br ${t.from} ${t.to} mb-2.5`} />
+                      <h4 className="font-bold text-center text-sm text-slate-800">{t.label}</h4>
                       <p className="text-[10px] text-slate-400 text-center">{t.sub}</p>
                     </div>
                   ))}

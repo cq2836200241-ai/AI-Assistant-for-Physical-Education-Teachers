@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { getDefaultClassCounts, EDUCATION_LEVELS } from '../constants/education';
+import { DEFAULT_TIME_SLOTS, type TimeSlot } from '../constants/timetable';
 import type { LessonPlanV2 } from '../utils/lessonPlanStorageV2';
+
+const TIMETABLE_SLOT_TYPES = new Set<TimeSlot['type']>(['morning', 'afternoon', 'evening', 'break']);
 
 export interface FormState {
   grades: string[];
@@ -115,6 +118,10 @@ interface AppState {
   updateSchedule: (key: string, subject: string) => void;
 
   // Course Data (可编辑的课表)
+  timetableSlots: TimeSlot[];
+  setTimetableSlots: (slots: TimeSlot[]) => void;
+  updateTimetableSlot: (slotId: string, patch: Partial<TimeSlot>) => void;
+  resetTimetableSlots: () => void;
   courseData: CourseEntry[];
   setCourseData: (data: CourseEntry[]) => void;
   addCourseEntry: (entry: CourseEntry) => void;
@@ -149,6 +156,7 @@ export interface PersistedAppState {
   educationLevel: string;
   classCounts: Record<string, number>;
   schedule: Record<string, string>;
+  timetableSlots: TimeSlot[];
   courseData: CourseEntry[];
   autoMist: boolean;
   classReminderEnabled: boolean;
@@ -213,6 +221,26 @@ const defaultCourseData: CourseEntry[] = [
   { day: 5, slotId: 'pm2', grade: '五', className: '3' },
 ];
 
+function resolveTimetableSlots(slots?: TimeSlot[]): TimeSlot[] {
+  if (!Array.isArray(slots)) return DEFAULT_TIME_SLOTS;
+
+  const normalized = slots
+    .filter((slot): slot is TimeSlot => Boolean(slot?.id))
+    .map((slot) => {
+      const type = TIMETABLE_SLOT_TYPES.has(slot.type) ? slot.type : 'morning';
+      return {
+        id: String(slot.id),
+        name: slot.name || '自定义时段',
+        startTime: slot.startTime || '08:00',
+        endTime: slot.endTime || '08:40',
+        type,
+        typeLabel: slot.typeLabel,
+      };
+    });
+
+  return normalized.length > 0 ? normalized : DEFAULT_TIME_SLOTS;
+}
+
 export const useAppStore = create<AppState>()((set) => ({
       form: defaultForm,
       setForm: (newForm) => set((state) => ({ form: { ...state.form, ...newForm } })),
@@ -220,7 +248,7 @@ export const useAppStore = create<AppState>()((set) => ({
       providers: defaultProviders,
       activeProviderId: 'gemini',
       theme: 'ocean',
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => set({ theme: resolveTheme(theme) }),
       setActiveProviderId: (id) => set({ activeProviderId: id }),
       updateProvider: (id, config) => set((state) => ({
         providers: {
@@ -280,6 +308,14 @@ export const useAppStore = create<AppState>()((set) => ({
       schedule: {},
       updateSchedule: (key, subject) => set((state) => ({ schedule: { ...state.schedule, [key]: subject } })),
       
+      timetableSlots: DEFAULT_TIME_SLOTS,
+      setTimetableSlots: (slots) => set({ timetableSlots: resolveTimetableSlots(slots) }),
+      updateTimetableSlot: (slotId, patch) => set((state) => ({
+        timetableSlots: state.timetableSlots.map((slot) => (
+          slot.id === slotId ? { ...slot, ...patch, id: slot.id } : slot
+        ))
+      })),
+      resetTimetableSlots: () => set({ timetableSlots: DEFAULT_TIME_SLOTS }),
       courseData: defaultCourseData,
       setCourseData: (data) => set({ courseData: data }),
       addCourseEntry: (entry) => set((state) => ({ courseData: [...state.courseData, entry] })),
@@ -316,6 +352,7 @@ export function getPersistedAppState(state = useAppStore.getState()): PersistedA
     educationLevel: state.educationLevel,
     classCounts: state.classCounts,
     schedule: state.schedule,
+    timetableSlots: state.timetableSlots,
     courseData: state.courseData,
     autoMist: state.autoMist,
     classReminderEnabled: state.classReminderEnabled,
@@ -323,10 +360,11 @@ export function getPersistedAppState(state = useAppStore.getState()): PersistedA
   };
 }
 
-const REMOVED_THEMES = new Set(['dark', 'dream']);
+const AVAILABLE_THEMES = new Set(['ocean', 'sunset', 'cyan-blue', 'minimal']);
+const REMOVED_THEMES = new Set(['dark', 'dream', 'aurora', 'insight-grid']);
 
 function resolveTheme(theme: string | undefined): string {
-  if (!theme || REMOVED_THEMES.has(theme)) return 'ocean';
+  if (!theme || REMOVED_THEMES.has(theme) || !AVAILABLE_THEMES.has(theme)) return 'ocean';
   return theme;
 }
 
@@ -342,6 +380,7 @@ export function applyPersistedAppState(state: Partial<PersistedAppState>) {
     educationLevel: state.educationLevel || 'primary',
     classCounts: state.classCounts || getDefaultClassCounts(),
     schedule: state.schedule || {},
+    timetableSlots: resolveTimetableSlots(state.timetableSlots),
     courseData: Array.isArray(state.courseData) ? state.courseData : defaultCourseData,
     autoMist: Boolean(state.autoMist),
     classReminderEnabled: Boolean(state.classReminderEnabled),

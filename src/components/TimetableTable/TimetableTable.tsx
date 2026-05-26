@@ -1,12 +1,43 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { TIME_SLOTS } from '../../constants/timetable';
-import { Clock, Zap, X, Pencil, Check, Trash2 } from 'lucide-react';
+import type { TimeSlot } from '../../constants/timetable';
+import { Clock, Zap, X, Pencil, Check, Trash2, RotateCcw, SlidersHorizontal, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore, CourseEntry } from '../../store/appStore';
 import { getGradesByLevel, GRADE_SHORT } from '../../constants/education';
 
+const SLOT_TYPE_OPTIONS: Array<{ value: TimeSlot['type']; label: string }> = [
+  { value: 'morning', label: '上午课程' },
+  { value: 'afternoon', label: '下午课程' },
+  { value: 'evening', label: '延时服务' },
+  { value: 'break', label: '休息/用餐' },
+];
+
+const getSlotTypeSelectValue = (slot: TimeSlot) => (
+  typeof slot.typeLabel === 'string' ? 'custom' : slot.type
+);
+
+const isCourseSlot = (slot: TimeSlot) => slot.type !== 'break';
+
+const addMinutesToTime = (time: string, minutes: number) => {
+  const [hour = 8, minute = 0] = time.split(':').map(Number);
+  const next = Math.max(0, Math.min(23 * 60 + 59, hour * 60 + minute + minutes));
+  return `${Math.floor(next / 60).toString().padStart(2, '0')}:${(next % 60).toString().padStart(2, '0')}`;
+};
+
 export function TimetableTable() {
-  const { autoMist, setAutoMist, courseData, setCourseData, addCourseEntry, removeCourseEntry, isTimetableEditMode, setTimetableEditMode, educationLevel, classCounts } = useAppStore();
+  const {
+    autoMist,
+    courseData,
+    setCourseData,
+    removeCourseEntry,
+    timetableSlots,
+    setTimetableSlots,
+    updateTimetableSlot,
+    resetTimetableSlots,
+    isTimetableEditMode,
+    educationLevel,
+    classCounts,
+  } = useAppStore();
   
   // Generate grade options (short) based on education level
   const gradeOptions = useMemo(() => {
@@ -26,6 +57,10 @@ export function TimetableTable() {
   }, [classCounts]);
 
   const days = ['周一', '周二', '周三', '周四', '周五'];
+  const sortedTimetableSlots = useMemo(
+    () => [...timetableSlots].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [timetableSlots]
+  );
   const modalRef = useRef<HTMLDivElement>(null);
   const [sourceRect, setSourceRect] = useState<DOMRect | null>(null);
   const [modalPos, setModalPos] = useState({ top: '50%', left: '50%' });
@@ -35,9 +70,11 @@ export function TimetableTable() {
     nextSlotId: null,
     timeStr: '00:00' 
   });
-  const [selectedCourse, setSelectedCourse] = useState<{ course: CourseEntry, slot: typeof TIME_SLOTS[0] } | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<{ course: CourseEntry, slot: TimeSlot } | null>(null);
   const [isEditingCourse, setIsEditingCourse] = useState(false);
-  const [hoverTimeInfo, setHoverTimeInfo] = useState<{ slot: typeof TIME_SLOTS[0]; rect: DOMRect } | null>(null);
+  const [isEditingSlots, setIsEditingSlots] = useState(false);
+  const [hoverTimeInfo, setHoverTimeInfo] = useState<{ slot: TimeSlot; rect: DOMRect } | null>(null);
+  const [showEditModeBurst, setShowEditModeBurst] = useState(false);
 
   const isEditMode = isTimetableEditMode;
   const [editDay, setEditDay] = useState(1);
@@ -45,6 +82,7 @@ export function TimetableTable() {
   const [editGrade, setEditGrade] = useState('五');
   const [editClassName, setEditClassName] = useState('1');
   const [addingNew, setAddingNew] = useState(false);
+  const [editingOriginalKey, setEditingOriginalKey] = useState<{ day: number; slotId: string } | null>(null);
 
   // Update modal position based on source button
   useEffect(() => {
@@ -88,14 +126,16 @@ export function TimetableTable() {
       let currentSlotId: string | null = null;
       let nextSlotId: string | null = null;
 
-      TIME_SLOTS.forEach(slot => {
+      sortedTimetableSlots.forEach(slot => {
         if (timeStr >= slot.startTime && timeStr <= slot.endTime) {
           currentSlotId = slot.id;
         }
       });
 
       // Find next slot for today
-      const upcomingToday = TIME_SLOTS.filter(slot => slot.startTime > timeStr && slot.type !== 'break');
+      const upcomingToday = sortedTimetableSlots
+        .filter(slot => slot.startTime > timeStr && isCourseSlot(slot))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
       if (upcomingToday.length > 0) {
         nextSlotId = upcomingToday[0].id;
       }
@@ -106,13 +146,28 @@ export function TimetableTable() {
     updateCurrentSlot();
     const timer = setInterval(updateCurrentSlot, 30000); // 30s update
     return () => clearInterval(timer);
-  }, []);
+  }, [sortedTimetableSlots]);
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setIsEditingSlots(false);
+      setIsEditingCourse(false);
+      setAddingNew(false);
+      setEditingOriginalKey(null);
+      setShowEditModeBurst(false);
+      return;
+    }
+
+    setShowEditModeBurst(true);
+    const timer = window.setTimeout(() => setShowEditModeBurst(false), 950);
+    return () => window.clearTimeout(timer);
+  }, [isEditMode]);
   
   const getCourse = (dayIndex: number, slotId: string) => {
     return courseData.find(c => c.day === dayIndex + 1 && c.slotId === slotId);
   };
 
-  const isPast = (dayIndex: number, slot: typeof TIME_SLOTS[0]) => {
+  const isPast = (dayIndex: number, slot: TimeSlot) => {
     const courseDay = dayIndex + 1; // 1-5
     const currentDay = currentTimeInfo.day;
     
@@ -125,44 +180,237 @@ export function TimetableTable() {
   };
 
   const handleEditCourse = (day: number, slotId: string, grade: string, className: string) => {
+    if (!isEditMode) return;
     setEditDay(day);
     setEditSlotId(slotId);
     setEditGrade(grade);
     setEditClassName(className);
+    setEditingOriginalKey({ day, slotId });
     setIsEditingCourse(true);
     setSelectedCourse(null);
   };
 
   const handleDeleteCourse = (day: number, slotId: string) => {
+    if (!isEditMode) return;
     removeCourseEntry(day, slotId);
     setSelectedCourse(null);
   };
 
   const saveEdit = () => {
-    // Remove old entry
-    const updatedData = courseData.filter(e => !(e.day === editDay && e.slotId === editSlotId));
+    const sourceKey = editingOriginalKey || { day: editDay, slotId: editSlotId };
+    const updatedData = courseData.filter(e => (
+      !(e.day === sourceKey.day && e.slotId === sourceKey.slotId) &&
+      !(e.day === editDay && e.slotId === editSlotId)
+    ));
     // Add new entry
     updatedData.push({ day: editDay, slotId: editSlotId, grade: editGrade, className: editClassName });
     setCourseData(updatedData);
     setIsEditingCourse(false);
     setAddingNew(false);
+    setEditingOriginalKey(null);
   };
 
   const startAddCourse = (day: number, slotId: string) => {
+    if (!isEditMode) return;
     setEditDay(day);
     setEditSlotId(slotId);
     setEditGrade('五');
     setEditClassName('1');
+    setEditingOriginalKey(null);
     setAddingNew(true);
   };
 
   const handleSaveNew = () => {
-    addCourseEntry({ day: editDay, slotId: editSlotId, grade: editGrade, className: editClassName });
+    const updatedData = courseData.filter(e => !(e.day === editDay && e.slotId === editSlotId));
+    updatedData.push({ day: editDay, slotId: editSlotId, grade: editGrade, className: editClassName });
+    setCourseData(updatedData);
     setAddingNew(false);
+    setEditingOriginalKey(null);
+  };
+
+  const handleAddTimeSlot = () => {
+    const lastSlot = sortedTimetableSlots[sortedTimetableSlots.length - 1];
+    const startTime = lastSlot?.endTime || '08:00';
+    const endTime = addMinutesToTime(startTime, 40);
+    const id = `custom-${Date.now().toString(36)}`;
+
+    setTimetableSlots([
+      ...sortedTimetableSlots,
+      {
+        id,
+        name: '自定义时段',
+        startTime,
+        endTime,
+        type: 'morning',
+        typeLabel: '自定义',
+      },
+    ]);
+  };
+
+  const handleDeleteTimeSlot = (slotId: string) => {
+    if (timetableSlots.length <= 1) {
+      globalThis.alert('至少需要保留一个作息时段。');
+      return;
+    }
+
+    const usedByCourse = courseData.some((course) => course.slotId === slotId);
+    if (usedByCourse) {
+      const confirmed = globalThis.confirm('该时段已有课程安排，删除后对应课程也会一起移除。确定删除吗？');
+      if (!confirmed) return;
+    }
+
+    setTimetableSlots(sortedTimetableSlots.filter((slot) => slot.id !== slotId));
+    setCourseData(courseData.filter((course) => course.slotId !== slotId));
+  };
+
+  const handleSlotTypeChange = (slot: TimeSlot, value: TimeSlot['type'] | 'custom') => {
+    if (value === 'custom') {
+      updateTimetableSlot(slot.id, {
+        type: slot.type === 'break' ? 'break' : slot.type,
+        typeLabel: slot.typeLabel ?? '自定义',
+      });
+      return;
+    }
+
+    updateTimetableSlot(slot.id, { type: value, typeLabel: undefined });
+  };
+
+  const renderTimeSlotEditor = () => {
+    return (
+      <div className="fixed inset-0 top-[64px] z-[100] pointer-events-none">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-slate-900/20 backdrop-blur-xl pointer-events-auto"
+          onClick={() => setIsEditingSlots(false)}
+        />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.94 }}
+            className="relative bg-white rounded-2xl shadow-2xl border-2 border-primary-400 w-full max-w-2xl max-h-[78vh] overflow-hidden pointer-events-auto"
+          >
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50">
+              <SlidersHorizontal className="w-4 h-4 text-primary-600" />
+              <div>
+                <div className="text-base font-black text-slate-900">作息时间</div>
+                <div className="text-xs text-slate-500">调整后会同步影响课表高亮和上课提醒</div>
+              </div>
+              <button
+                onClick={() => setIsEditingSlots(false)}
+                className="ml-auto h-8 w-8 rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 transition-colors"
+                aria-label="关闭作息时间编辑"
+              >
+                <X className="w-4 h-4 mx-auto" />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(78vh-118px)] overflow-y-auto custom-scrollbar p-4 space-y-2">
+              {sortedTimetableSlots.map((slot) => (
+                <div
+                  key={slot.id}
+                  className="grid grid-cols-2 sm:grid-cols-[1.1fr_0.8fr_0.8fr_1fr_auto] gap-2 items-center rounded-xl border border-slate-100 bg-slate-50/70 p-2"
+                >
+                  <input
+                    value={slot.name}
+                    onChange={(e) => updateTimetableSlot(slot.id, { name: e.target.value })}
+                    className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-primary-400"
+                    aria-label={`${slot.name}名称`}
+                  />
+                  <input
+                    type="time"
+                    value={slot.startTime}
+                    onChange={(e) => updateTimetableSlot(slot.id, { startTime: e.target.value })}
+                    className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm font-bold text-slate-700 outline-none focus:border-primary-400"
+                    aria-label={`${slot.name}开始时间`}
+                  />
+                  <input
+                    type="time"
+                    value={slot.endTime}
+                    onChange={(e) => updateTimetableSlot(slot.id, { endTime: e.target.value })}
+                    className="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm font-bold text-slate-700 outline-none focus:border-primary-400"
+                    aria-label={`${slot.name}结束时间`}
+                  />
+                  <div className="col-span-2 sm:col-span-1 flex min-w-0 items-center gap-2">
+                    <select
+                      value={getSlotTypeSelectValue(slot)}
+                      onChange={(e) => handleSlotTypeChange(slot, e.target.value as TimeSlot['type'] | 'custom')}
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2 text-sm font-bold text-slate-700 outline-none focus:border-primary-400"
+                      aria-label={`${slot.name}类型`}
+                    >
+                      {SLOT_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                      <option value="custom">自定义</option>
+                    </select>
+                    {slot.typeLabel !== undefined && (
+                      <label className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={slot.type !== 'break'}
+                          onChange={(e) => updateTimetableSlot(slot.id, { type: e.target.checked ? 'morning' : 'break' })}
+                          className="h-3.5 w-3.5 accent-primary-600"
+                        />
+                        可排课
+                      </label>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTimeSlot(slot.id)}
+                    className="col-span-2 sm:col-span-1 flex h-9 items-center justify-center rounded-lg border border-red-100 bg-white text-red-500 hover:bg-red-50 transition-colors"
+                    aria-label={`删除${slot.name}`}
+                    title="删除"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                  {slot.typeLabel !== undefined && (
+                    <input
+                      value={slot.typeLabel}
+                      onChange={(e) => updateTimetableSlot(slot.id, { typeLabel: e.target.value })}
+                      className="col-span-2 sm:col-span-5 h-9 min-w-0 rounded-lg border border-primary-100 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-primary-400"
+                      placeholder="输入自定义类型，如社团课、阳光体育、晚餐时间"
+                      aria-label={`${slot.name}自定义类型名称`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 bg-white">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleAddTimeSlot}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-700 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  新增时段
+                </button>
+                <button
+                  onClick={resetTimetableSlots}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  恢复默认
+                </button>
+              </div>
+              <button
+                onClick={() => setIsEditingSlots(false)}
+                className="rounded-xl bg-primary-600 px-5 py-2 text-sm font-bold text-white hover:bg-primary-700 transition-colors"
+              >
+                完成
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
   };
 
   // Simple inline editor for when clicking on an empty cell
-  const SimpleCourseEditor = () => {
+  const renderSimpleCourseEditor = () => {
     return (
       <div className="fixed inset-0 top-[64px] z-[100] pointer-events-none">
         <motion.div 
@@ -170,7 +418,7 @@ export function TimetableTable() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-slate-900/20 backdrop-blur-xl pointer-events-auto"
-          onClick={() => { setIsEditingCourse(false); setAddingNew(false); }}
+          onClick={() => { setIsEditingCourse(false); setAddingNew(false); setEditingOriginalKey(null); }}
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <motion.div 
@@ -199,7 +447,7 @@ export function TimetableTable() {
                   onChange={e => setEditSlotId(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
                 >
-                  {TIME_SLOTS.filter(s => s.type !== 'break').map(s => (
+                  {sortedTimetableSlots.filter(isCourseSlot).map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.startTime}-{s.endTime})</option>
                   ))}
                 </select>
@@ -228,7 +476,7 @@ export function TimetableTable() {
               </div>
               <div className="flex gap-2 mt-4">
                 <button 
-                  onClick={() => { setIsEditingCourse(false); setAddingNew(false); }}
+                  onClick={() => { setIsEditingCourse(false); setAddingNew(false); setEditingOriginalKey(null); }}
                   className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
                 >
                   取消
@@ -250,6 +498,21 @@ export function TimetableTable() {
 
   return (
     <div className="h-full flex flex-col relative">
+      <AnimatePresence>
+        {showEditModeBurst && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.86, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 1.12, filter: 'blur(10px)' }}
+            transition={{ duration: 0.28 }}
+            className="pointer-events-none absolute inset-0 z-[95] flex items-center justify-center"
+          >
+            <div className="rounded-3xl border border-white/40 bg-slate-950/55 px-12 py-7 text-5xl font-black text-white shadow-2xl backdrop-blur-md">
+              编辑
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* 悬停浮动时间提示 */}
       {hoverTimeInfo && (
         <div
@@ -345,27 +608,30 @@ export function TimetableTable() {
                   <span>→</span>
                   <span className="bg-slate-100 px-2 py-0.5 rounded">{selectedCourse.slot.endTime}</span>
                 </div>
-                <div className="flex gap-1.5 pt-1">
-                  <button 
-                    onClick={() => handleEditCourse(selectedCourse.course.day, selectedCourse.course.slotId, selectedCourse.course.grade, selectedCourse.course.className)}
-                    className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors"
-                  >
-                    <Pencil className="w-3 h-3 inline mr-0.5" />编辑
-                  </button>
-                  <button 
-                    onClick={() => handleDeleteCourse(selectedCourse.course.day, selectedCourse.course.slotId)}
-                    className="flex-1 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100 transition-colors"
-                  >
-                    <Trash2 className="w-3 h-3 inline mr-0.5" />删除
-                  </button>
-                </div>
+                {isEditMode && (
+                  <div className="flex gap-1.5 pt-1">
+                    <button 
+                      onClick={() => handleEditCourse(selectedCourse.course.day, selectedCourse.course.slotId, selectedCourse.course.grade, selectedCourse.course.className)}
+                      className="flex-1 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3 inline mr-0.5" />编辑
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteCourse(selectedCourse.course.day, selectedCourse.course.slotId)}
+                      className="flex-1 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3 inline mr-0.5" />删除
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
         )}
         
         {/* Editing modal */}
-        {(isEditingCourse || addingNew) && <SimpleCourseEditor />}
+        {isEditingSlots && renderTimeSlotEditor()}
+        {(isEditingCourse || addingNew) && renderSimpleCourseEditor()}
       </AnimatePresence>
 
       {/* Edit mode hint */}
@@ -377,16 +643,26 @@ export function TimetableTable() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 bg-white rounded-2xl shadow-xl border-[3px] border-slate-500 overflow-hidden">
+      <div className={`flex-1 min-h-0 bg-white rounded-2xl shadow-xl border-[3px] overflow-hidden transition-all ${isEditMode ? 'timetable-edit-shell border-primary-500 ring-4 ring-primary-100' : 'border-slate-500'}`}>
         <div className="h-full overflow-x-auto overflow-y-auto custom-scrollbar">
           <table className="w-full min-w-[600px] border-collapse">
             <thead className="sticky top-0 z-10 shadow-md">
               <tr className="bg-gradient-to-r from-primary-500 to-secondary-500 border-b-2 border-white/20">
                 <motion.th
                   whileHover={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-                  className="py-1 sm:py-1.5 px-1 sm:px-2 text-center text-[11px] sm:text-[13px] font-black text-white border-r border-white/10 min-w-[60px] sm:min-w-[80px]"
+                  className={`py-1 sm:py-1.5 px-1 sm:px-2 text-center text-[11px] sm:text-[13px] font-black text-white border-r border-white/10 min-w-[60px] sm:min-w-[80px] ${isEditMode ? 'timetable-edit-time-head' : ''}`}
                 >
-                  时间
+                  <button
+                    type="button"
+                    onClick={() => isEditMode && setIsEditingSlots(true)}
+                    className={`inline-flex items-center justify-center gap-1 rounded-md px-1.5 py-1 transition-colors ${isEditMode ? 'hover:bg-white/15 cursor-pointer' : 'cursor-default'}`}
+                    aria-label={isEditMode ? '编辑作息时间' : '时间'}
+                    title={isEditMode ? '编辑作息时间' : '开启编辑课表后可修改作息时间'}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>时间</span>
+                    {isEditMode && <Pencil className="w-3 h-3" />}
+                  </button>
                 </motion.th>
                 {days.map((day, idx) => {
                   const isToday = currentTimeInfo.day === idx + 1;
@@ -406,8 +682,8 @@ export function TimetableTable() {
               </tr>
             </thead>
             <tbody>
-              {TIME_SLOTS.map((slot) => {
-                const isBreak = slot.type === 'break';
+              {sortedTimetableSlots.map((slot) => {
+                const isBreak = !isCourseSlot(slot);
                 const isCurrentSlot = currentTimeInfo.slotId === slot.id;
                 
                 return (
@@ -425,7 +701,8 @@ export function TimetableTable() {
                         zIndex: 40,
                         boxShadow: '0 4px 8px -2px rgb(0 0 0 / 0.1)'
                       }}
-                      className={`py-0 px-0.5 sm:px-1 border-r-2 border-slate-400 font-bold transition-all cursor-default relative ${isCurrentSlot ? 'bg-primary-50' : 'bg-white'}`}
+                      className={`py-0 px-0.5 sm:px-1 border-r-2 border-slate-400 font-bold transition-all relative ${isEditMode ? 'timetable-edit-time-cell cursor-pointer' : 'cursor-default'} ${isCurrentSlot ? 'bg-primary-50' : 'bg-white'}`}
+                      onClick={() => isEditMode && setIsEditingSlots(true)}
                     >
                       <div className="flex flex-col items-center gap-0 group">
                         <span className={`text-[10px] sm:text-[12px] font-black leading-none flex items-center gap-1 ${isCurrentSlot ? 'text-primary-700' : isBreak ? 'text-slate-500' : 'text-slate-900'}`}>
@@ -484,14 +761,18 @@ export function TimetableTable() {
                                   }}
                                   onMouseLeave={() => setHoverTimeInfo(null)}
                                   onClick={(e) => {
-                                    if (!isEditMode) {
-                                      const rect = e.currentTarget.getBoundingClientRect();
-                                      setSourceRect(rect);
-                                      setSelectedCourse({ course, slot });
+                                    if (isEditMode) {
+                                      handleEditCourse(course.day, course.slotId, course.grade, course.className);
+                                      return;
                                     }
+
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setSourceRect(rect);
+                                    setSelectedCourse({ course, slot });
                                   }}
                                   className={`
                                     w-full py-0.5 px-0.5 rounded flex flex-col items-center justify-center shadow-sm ring-1 transition-all cursor-pointer
+                                    ${isEditMode ? 'timetable-edit-course-card' : ''}
                                     ${isTargetCell ? 'scale-105 shadow-primary-200 z-10 border-2 border-white' : ''}
                                     ${isNextCell ? 'scale-110 ring-[5px] ring-amber-400 z-20 shadow-xl border-2 border-white' : ''}
                                     ${(() => {
@@ -506,7 +787,7 @@ export function TimetableTable() {
                                   })()}
                                 `}>
                                   <span className={`${isNextCell ? 'text-[13px] sm:text-[16px]' : 'text-[11px] sm:text-[13px]'} font-black tracking-wide`}>
-                                    {course.grade}({course.className})
+                                    <span className={isEditMode ? 'timetable-edit-course-text' : ''}>{course.grade}({course.className})</span>
                                   </span>
                                   {isTargetCell && <span className="text-[8px] font-black mt-0 uppercase tracking-tighter bg-white/20 px-1 rounded">●</span>}
                                   {isNextCell && <span className="text-[8px] font-black mt-0 uppercase tracking-tighter bg-amber-200 text-amber-900 px-1.5 rounded-full animate-bounce">→</span>}
@@ -524,7 +805,7 @@ export function TimetableTable() {
                                   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                                 }}
                                 onClick={() => isEditMode && startAddCourse(dIdx + 1, slot.id)}
-                                className={`h-4 flex items-center justify-center rounded-sm transition-all ${isNextCell ? 'ring-4 ring-amber-300 bg-amber-50' : ''} ${isEditMode ? 'cursor-pointer hover:bg-primary-50 hover:ring-2 hover:ring-primary-300' : ''}`}
+                                className={`h-4 flex items-center justify-center rounded-sm transition-all ${isNextCell ? 'ring-4 ring-amber-300 bg-amber-50' : ''} ${isEditMode ? 'cursor-pointer bg-primary-50/40 ring-1 ring-dashed ring-primary-200 hover:bg-primary-50 hover:ring-2 hover:ring-primary-300' : ''}`}
                               >
                                 {isTargetCell ? (
                                   <div className="text-[10px] font-black text-primary-400 animate-pulse">正在休息/办公</div>

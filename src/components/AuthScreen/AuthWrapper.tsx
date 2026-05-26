@@ -16,23 +16,13 @@ type AuthWrapperProps = {
 };
 
 function AuthBackdrop() {
-  const theme = useAppStore((state) => state.theme);
-
   return (
     <>
-      {theme === 'insight-grid' && <div className="insight-grid-backdrop fixed inset-0 z-0" />}
       <div className="auth-shell-backdrop absolute inset-0 z-0 overflow-hidden">
         <div className="auth-shell-orb auth-shell-orb-primary" />
         <div className="auth-shell-orb auth-shell-orb-secondary" />
         <div className="auth-shell-orb auth-shell-orb-tertiary" />
       </div>
-      {(theme === 'aurora' || theme === 'insight-grid') && (
-        <div
-          className={`fixed bottom-0 left-0 right-0 h-[3px] z-[2] pointer-events-none ${
-            theme === 'aurora' ? 'aurora-stripe' : 'insight-grid-stripe'
-          }`}
-        />
-      )}
     </>
   );
 }

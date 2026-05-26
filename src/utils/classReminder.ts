@@ -1,4 +1,4 @@
-import { TIME_SLOTS } from '../constants/timetable';
+import type { TimeSlot } from '../constants/timetable';
 import type { CourseEntry } from '../store/appStore';
 
 export const CLASS_REMINDER_LEAD_MINUTES = 5;
@@ -18,6 +18,10 @@ export function formatClassLabel(grade: string, className: string): string {
   return `${grade}年级(${className})班`;
 }
 
+function isCourseSlot(slot: TimeSlot): boolean {
+  return slot.type !== 'break';
+}
+
 export interface ClassReminderPayload {
   key: string;
   title: string;
@@ -26,6 +30,7 @@ export interface ClassReminderPayload {
 
 export function getDueReminders(
   courseData: CourseEntry[],
+  timetableSlots: TimeSlot[],
   leadMinutes = CLASS_REMINDER_LEAD_MINUTES,
   now = getBeijingDate()
 ): ClassReminderPayload[] {
@@ -39,8 +44,8 @@ export function getDueReminders(
   for (const course of courseData) {
     if (course.day !== weekday) continue;
 
-    const slot = TIME_SLOTS.find((item) => item.id === course.slotId);
-    if (!slot || slot.type === 'break') continue;
+    const slot = timetableSlots.find((item) => item.id === course.slotId);
+    if (!slot || !isCourseSlot(slot)) continue;
 
     const startMinutes = timeToMinutes(slot.startTime);
     const remindFrom = startMinutes - leadMinutes;

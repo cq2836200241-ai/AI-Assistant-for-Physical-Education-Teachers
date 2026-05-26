@@ -4,6 +4,7 @@ export interface TimeSlot {
   startTime: string;
   endTime: string;
   type: 'morning' | 'afternoon' | 'evening' | 'break';
+  typeLabel?: string;
 }
 
 export interface CourseEntry {
@@ -13,7 +14,7 @@ export interface CourseEntry {
   className: string;
 }
 
-export const TIME_SLOTS: TimeSlot[] = [
+export const DEFAULT_TIME_SLOTS: TimeSlot[] = [
   { id: 'am1', name: '第一节', startTime: '08:20', endTime: '09:00', type: 'morning' },
   { id: 'am2', name: '第二节', startTime: '09:15', endTime: '09:55', type: 'morning' },
   { id: 'break1', name: '大课间', startTime: '09:55', endTime: '10:25', type: 'break' },
@@ -26,6 +27,8 @@ export const TIME_SLOTS: TimeSlot[] = [
   { id: 'ext1', name: '延时服务1', startTime: '15:30', endTime: '16:30', type: 'evening' },
   { id: 'ext2', name: '延时服务2', startTime: '16:40', endTime: '17:40', type: 'evening' },
 ];
+
+export const TIME_SLOTS: TimeSlot[] = DEFAULT_TIME_SLOTS;
 
 export const COURSE_DATA: CourseEntry[] = [
   // 周一

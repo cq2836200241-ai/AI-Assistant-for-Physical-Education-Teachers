@@ -501,10 +501,6 @@ function MainApp() {
         webHeader
       )}
 
-      {store.theme === 'insight-grid' && (
-        <div className="insight-grid-backdrop fixed inset-0 z-0" />
-      )}
-
       {/* Main Layout */}
       <main className="flex-1 flex overflow-hidden p-2 sm:p-4 gap-2 sm:gap-6 border border-[#f7fbff] bg-[#ffffff] relative">
         {/* 桌面端：左侧面板 (>=1024px) */}
@@ -592,15 +588,6 @@ function MainApp() {
 
         </section>
       </main>
-
-      {/* 暗夜极光主题底部条纹 */}
-      {store.theme === 'aurora' && (
-        <div className="fixed bottom-0 left-0 right-0 h-[3px] z-[100] pointer-events-none aurora-stripe" />
-      )}
-
-      {store.theme === 'insight-grid' && (
-        <div className="fixed bottom-0 left-0 right-0 h-[3px] z-[100] pointer-events-none insight-grid-stripe" />
-      )}
 
       <ClassReminderWatcher />
     </div>
