@@ -38,7 +38,8 @@ async function geminiGenerateStream(
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
-  onProgress: (fullText: string) => void
+  onProgress: (fullText: string) => void,
+  preferJson: boolean = false
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey });
   let responseStream;
@@ -49,6 +50,7 @@ async function geminiGenerateStream(
       config: {
         systemInstruction: systemPrompt,
         temperature,
+        ...(preferJson ? { responseMimeType: 'application/json' } : {}),
       }
     });
   } catch (err: any) {
@@ -74,7 +76,8 @@ async function geminiGenerate(
   model: string,
   systemPrompt: string,
   userPrompt: string,
-  temperature: number
+  temperature: number,
+  preferJson: boolean = false
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey });
   let response;
@@ -85,6 +88,7 @@ async function geminiGenerate(
       config: {
         systemInstruction: systemPrompt,
         temperature,
+        ...(preferJson ? { responseMimeType: 'application/json' } : {}),
       }
     });
   } catch (err: any) {
@@ -111,7 +115,8 @@ function buildOpenAIBody(
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
-  stream: boolean
+  stream: boolean,
+  preferJson: boolean = false
 ) {
   return JSON.stringify({
     model,
@@ -120,7 +125,8 @@ function buildOpenAIBody(
       { role: 'user', content: userPrompt }
     ],
     temperature,
-    stream
+    stream,
+    ...(preferJson ? { response_format: { type: 'json_object' } } : {})
   });
 }
 
@@ -139,6 +145,11 @@ async function handleOpenAIError(res: Response): Promise<never> {
   throw new Error(`API Error: ${res.status} - ${errMessage}`);
 }
 
+function isUnsupportedJsonModeError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? '');
+  return /response_format|json_object|json mode|unsupported|not support|不支持|无效参数|invalid/i.test(message);
+}
+
 /**
  * OpenAI 兼容接口 - 流式生成
  */
@@ -149,13 +160,14 @@ async function openaiGenerateStream(
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
-  onProgress: (fullText: string) => void
+  onProgress: (fullText: string) => void,
+  preferJson: boolean = false
 ): Promise<string> {
   const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   const res = await fetch(url, {
     method: 'POST',
     headers: buildOpenAIHeaders(apiKey),
-    body: buildOpenAIBody(model, systemPrompt, userPrompt, temperature, true)
+    body: buildOpenAIBody(model, systemPrompt, userPrompt, temperature, true, preferJson)
   });
 
   if (!res.ok) {
@@ -207,13 +219,14 @@ async function openaiGenerate(
   model: string,
   systemPrompt: string,
   userPrompt: string,
-  temperature: number
+  temperature: number,
+  preferJson: boolean = false
 ): Promise<string> {
   const url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   const res = await fetch(url, {
     method: 'POST',
     headers: buildOpenAIHeaders(apiKey),
-    body: buildOpenAIBody(model, systemPrompt, userPrompt, temperature, false)
+    body: buildOpenAIBody(model, systemPrompt, userPrompt, temperature, false, preferJson)
   });
 
   if (!res.ok) {
@@ -227,46 +240,83 @@ export const useAIProvider = () => {
   const generateStream = async function (
     systemPrompt: string, 
     userPrompt: string, 
-    onProgress: (content: string) => void
+    onProgress: (content: string) => void,
+    options?: { preferJson?: boolean }
   ) {
     const { provider, providerId } = getActiveProvider();
+    const preferJson = options?.preferJson ?? false;
     
     if (providerId === 'gemini') {
       const apiKey = getApiKey(provider, providerId);
       if (!apiKey) throw new Error('请配置 Gemini API Key');
-      return geminiGenerateStream(
-        apiKey, provider.model, systemPrompt, userPrompt, 
-        provider.temperature, onProgress
-      );
+      try {
+        return await geminiGenerateStream(
+          apiKey, provider.model, systemPrompt, userPrompt, 
+          provider.temperature, onProgress, preferJson
+        );
+      } catch (err) {
+        if (!preferJson || !isUnsupportedJsonModeError(err)) throw err;
+        return geminiGenerateStream(
+          apiKey, provider.model, systemPrompt, userPrompt,
+          provider.temperature, onProgress, false
+        );
+      }
     } else {
       const apiKey = provider.apiKey;
       if (!apiKey) throw new Error(`请配置 ${provider.name} 的 API Key`);
-      return openaiGenerateStream(
-        provider.baseUrl || 'https://api.openai.com/v1', apiKey, 
-        provider.model, systemPrompt, userPrompt, 
-        provider.temperature, onProgress
-      );
+      try {
+        return await openaiGenerateStream(
+          provider.baseUrl || 'https://api.openai.com/v1', apiKey, 
+          provider.model, systemPrompt, userPrompt, 
+          provider.temperature, onProgress, preferJson
+        );
+      } catch (err) {
+        if (!preferJson || !isUnsupportedJsonModeError(err)) throw err;
+        return openaiGenerateStream(
+          provider.baseUrl || 'https://api.openai.com/v1', apiKey,
+          provider.model, systemPrompt, userPrompt,
+          provider.temperature, onProgress, false
+        );
+      }
     }
   };
 
-  const generate = async function (systemPrompt: string, userPrompt: string) {
+  const generate = async function (systemPrompt: string, userPrompt: string, options?: { preferJson?: boolean }) {
     const { provider, providerId } = getActiveProvider();
+    const preferJson = options?.preferJson ?? false;
     
     if (providerId === 'gemini') {
       const apiKey = getApiKey(provider, providerId);
       if (!apiKey) throw new Error('请配置 Gemini API Key');
-      return geminiGenerate(
-        apiKey, provider.model, systemPrompt, userPrompt, 
-        provider.temperature
-      );
+      try {
+        return await geminiGenerate(
+          apiKey, provider.model, systemPrompt, userPrompt, 
+          provider.temperature, preferJson
+        );
+      } catch (err) {
+        if (!preferJson || !isUnsupportedJsonModeError(err)) throw err;
+        return geminiGenerate(
+          apiKey, provider.model, systemPrompt, userPrompt,
+          provider.temperature, false
+        );
+      }
     } else {
       const apiKey = provider.apiKey;
       if (!apiKey) throw new Error(`请配置 ${provider.name} 的 API Key`);
-      return openaiGenerate(
-        provider.baseUrl || 'https://api.openai.com/v1', apiKey,
-        provider.model, systemPrompt, userPrompt,
-        provider.temperature
-      );
+      try {
+        return await openaiGenerate(
+          provider.baseUrl || 'https://api.openai.com/v1', apiKey,
+          provider.model, systemPrompt, userPrompt,
+          provider.temperature, preferJson
+        );
+      } catch (err) {
+        if (!preferJson || !isUnsupportedJsonModeError(err)) throw err;
+        return openaiGenerate(
+          provider.baseUrl || 'https://api.openai.com/v1', apiKey,
+          provider.model, systemPrompt, userPrompt,
+          provider.temperature, false
+        );
+      }
     }
   };
 

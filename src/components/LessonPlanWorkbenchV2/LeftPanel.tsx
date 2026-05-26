@@ -23,6 +23,7 @@ import {
   type LessonPlanV2,
 } from '../../utils/lessonPlanStorageV2';
 import { buildLessonPlanPromptV2 } from '../../utils/lessonPlanPromptV2';
+import { extractLessonPlanJson } from '../../utils/lessonPlanMarkdown';
 import { useAIProvider } from '../../hooks/useAIProvider';
 
 interface LeftPanelProps {
@@ -180,7 +181,7 @@ export function LeftPanel({
 
 confidence 必须是 0 到 1 之间的小数。`;
 
-    const text = await generate(systemPrompt, userPrompt);
+    const text = await generate(systemPrompt, userPrompt, { preferJson: true });
     const result = extractJson<TopicValidationResult>(text);
     const confidence = result?.confidence ?? 0;
 
@@ -208,9 +209,9 @@ confidence 必须是 0 到 1 之间的小数。`;
         venue: venue.trim(),
       });
 
-      const rawText = await generate(systemPrompt, userPrompt);
+      const rawText = await generate(systemPrompt, userPrompt, { preferJson: true });
 
-      const parsed = extractJson<LessonPlanV2>(rawText);
+      const parsed = extractLessonPlanJson(rawText);
       if (!parsed) {
         throw new Error('AI 返回的数据格式不正确，无法解析为有效的教案 JSON。请重试。');
       }

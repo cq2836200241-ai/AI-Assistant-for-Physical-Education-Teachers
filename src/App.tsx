@@ -158,16 +158,21 @@ function MainApp() {
     let lastUpdateTime = 0;
     
     try {
-      await generateStream(systemPrompt, userPrompt, (text) => {
-        generatedText = text;
-        const now = Date.now();
-        // JSON is rendered into the existing Markdown preview only after the response is complete.
-        if (now - lastUpdateTime > 150) {
-          let progress = Math.min(Math.floor(100 * (1 - Math.exp(-text.length / 2500))), 99);
-          store.setGenerationProgress(progress);
-          lastUpdateTime = now;
-        }
-      });
+      await generateStream(
+        systemPrompt,
+        userPrompt,
+        (text) => {
+          generatedText = text;
+          const now = Date.now();
+          // JSON is rendered into the existing Markdown preview only after the response is complete.
+          if (now - lastUpdateTime > 150) {
+            let progress = Math.min(Math.floor(100 * (1 - Math.exp(-text.length / 2500))), 99);
+            store.setGenerationProgress(progress);
+            lastUpdateTime = now;
+          }
+        },
+        { preferJson: true },
+      );
 
       if (!useAppStore.getState().isGenerating) {
          // Keep currentPlanContent empty so the start button can reappear after stopping.
