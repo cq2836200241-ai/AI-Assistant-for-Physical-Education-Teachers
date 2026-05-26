@@ -35,6 +35,8 @@ interface PreviewPanelProps {
   onToggleAdopted?: () => void;
 }
 
+type ResourcePreviewSource = 'history' | 'adopted' | null;
+
 export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, onLessonPlanV2FullscreenChange, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
   const {
     currentPlanContent, isGenerating, form, generationStatus, generationProgress,
@@ -54,6 +56,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const [editedContent, setEditedContent] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [resourcePreviewSource, setResourcePreviewSource] = useState<ResourcePreviewSource>(null);
 
   const days = ['星期一', '星期二', '星期三', '星期四', '星期五'];
   const periods = ['第一节', '第二节', '第三节', '第四节', '第五节', '第六节', '第七节', '第八节'];
@@ -66,6 +69,8 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const shouldRenderWorkspaceMask = isWorkspacePanelOpen || isWorkspaceMaskVisible;
   const shouldShowGeneratingOverlay = isGenerating && !shouldRenderWorkspaceMask;
   const shouldShowPreviewActions = !!displayContent && !isGenerating && !isWorkspacePanelOpen && !shouldRenderWorkspaceMask;
+  const shouldShowEditAction = !previewedHistoryPlan || resourcePreviewSource === 'history';
+  const shouldShowRegenerateAction = !previewedHistoryPlan;
 
   useEffect(() => {
     if (isWorkspacePanelOpen) {
@@ -79,6 +84,12 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
 
     return () => window.clearTimeout(timeoutId);
   }, [isWorkspacePanelOpen]);
+
+  useEffect(() => {
+    if (!previewedHistoryPlan) {
+      setResourcePreviewSource(null);
+    }
+  }, [previewedHistoryPlan]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -245,6 +256,19 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
     }
   };
 
+  const handleExitResourcePreview = () => {
+    const source = resourcePreviewSource;
+    setPreviewedHistoryPlan(null);
+
+    if (source === 'history') {
+      onToggleHistory?.();
+    }
+
+    if (source === 'adopted') {
+      onToggleAdopted?.();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
       <div className={`px-3 sm:px-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-500 shrink-0 h-auto min-h-[48px] sm:h-[64px] py-2 sm:py-0 shadow-sm flex-wrap gap-y-1.5 ${(showMovement || showSchedule || showGameLibrary) ? 'hidden' : ''}`}>
@@ -262,7 +286,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         
         <div className="flex items-center gap-1 sm:gap-2 export-btn flex-shrink-0">
           {previewedHistoryPlan && (
-            <Button variant="default" size="sm" onClick={() => setPreviewedHistoryPlan(null)} className="h-8 sm:h-auto py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-[12px] bg-primary-600 hover:bg-primary-700 text-[#fff]" title="退出预览">
+            <Button variant="default" size="sm" onClick={handleExitResourcePreview} className="h-8 sm:h-auto py-1 sm:py-1.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-[12px] bg-primary-600 hover:bg-primary-700 text-[#fff]" title="退出预览">
               退出预览
             </Button>
           )}
@@ -366,6 +390,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         <HistoryPanelContent 
           history={history}
           onLoadPlan={(plan) => {
+            setResourcePreviewSource('history');
             setPreviewedHistoryPlan(plan);
             onToggleHistory?.();
           }}
@@ -392,6 +417,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         <AdoptedPanelContent 
           adoptedPlans={adoptedPlans}
           onLoadPlan={(plan) => {
+            setResourcePreviewSource('adopted');
             setPreviewedHistoryPlan({
               id: plan.planId,
               title: plan.title,
@@ -489,17 +515,19 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
               {showSuccessMsg}
             </div>
           )}
-          {onGenerate && !previewedHistoryPlan && (
-            <>
-              <Button
-                onClick={handleEditToggle}
-                variant="outline"
-                className={`shadow-lg sm:shadow-xl rounded-full px-3 sm:px-5 py-3 sm:py-5 gap-1.5 sm:gap-2 font-bold text-[12px] sm:text-[14px] transition-all hover:scale-105 active:scale-95 border-2 ${isEditing ? 'bg-primary-600 text-white border-primary-500 hover:bg-primary-700' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
-              >
-                {isEditing ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                {isEditing ? '完成编辑' : '编辑教案'}
-              </Button>
+          {onGenerate && shouldShowEditAction && (
+            <Button
+              onClick={handleEditToggle}
+              variant="outline"
+              className={`shadow-lg sm:shadow-xl rounded-full px-3 sm:px-5 py-3 sm:py-5 gap-1.5 sm:gap-2 font-bold text-[12px] sm:text-[14px] transition-all hover:scale-105 active:scale-95 border-2 ${isEditing ? 'bg-primary-600 text-white border-primary-500 hover:bg-primary-700' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
+            >
+              {isEditing ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {isEditing ? '完成编辑' : '编辑教案'}
+            </Button>
+          )}
 
+          {onGenerate && shouldShowRegenerateAction && (
+            <>
               <Button
                 onClick={() => setIsRegenConfirmOpen(true)}
                 variant="outline"

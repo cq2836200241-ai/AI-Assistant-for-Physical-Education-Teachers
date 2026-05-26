@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, Notification, Menu, Tray, shell, safeStorage } = require('electron');
+﻿const { app, BrowserWindow, dialog, ipcMain, Notification, Menu, Tray, shell, safeStorage } = require('electron');
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
@@ -483,40 +483,6 @@ ipcMain.handle('class-reminder:show', async (_event, payload) => {
 
   notification.show();
   return { ok: true };
-});
-
-ipcMain.handle('desktop-capture:save-element', async (event, payload) => {
-  const window = BrowserWindow.fromWebContents(event.sender);
-  if (!window) {
-    throw new Error('无法找到当前窗口');
-  }
-
-  const filename = String(payload?.filename || '截图.png').replace(/[\\/:*?"<>|]/g, '_');
-  const rect = payload?.rect;
-  if (!rect || rect.width <= 0 || rect.height <= 0) {
-    throw new Error('截图区域无效');
-  }
-
-  const { canceled, filePath } = await dialog.showSaveDialog(window, {
-    title: '保存截图',
-    defaultPath: filename.endsWith('.png') ? filename : `${filename}.png`,
-    filters: [{ name: 'PNG 图片', extensions: ['png'] }],
-  });
-
-  if (canceled || !filePath) {
-    return { canceled: true };
-  }
-
-  const scaleFactor = window.webContents.getZoomFactor();
-  const image = await window.webContents.capturePage({
-    x: Math.max(0, Math.round(rect.x * scaleFactor)),
-    y: Math.max(0, Math.round(rect.y * scaleFactor)),
-    width: Math.max(1, Math.round(rect.width * scaleFactor)),
-    height: Math.max(1, Math.round(rect.height * scaleFactor)),
-  });
-
-  await fs.writeFile(filePath, image.toPNG());
-  return { canceled: false, filePath };
 });
 
 ipcMain.handle('desktop-store:get', async (_event, payload) => {

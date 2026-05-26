@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
+﻿import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import {
   AlertTriangle,
   BookOpen,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
-  Download,
   Gauge,
   Heart,
   LayoutGrid,
@@ -40,7 +37,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import html2canvas from 'html2canvas';
 import { useAIProvider } from '../../hooks/useAIProvider';
 import { useAppStore } from '../../store/appStore';
 
@@ -576,7 +572,45 @@ function DetailList({ items, tone = 'slate' }: { items: string[]; tone?: 'slate'
   );
 }
 
-function PaginatedGameDetail({
+function DetailSection({
+  sectionId,
+  title,
+  icon,
+  children,
+  tone = 'slate',
+  setSectionRef,
+}: {
+  sectionId: string;
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+  tone?: 'slate' | 'primary' | 'amber' | 'red';
+  setSectionRef: (id: string) => (element: HTMLElement | null) => void;
+}) {
+  const toneClass = {
+    slate: 'border-slate-200 bg-white text-slate-700',
+    primary: 'border-primary-100 bg-primary-50/30 text-primary-800',
+    amber: 'border-amber-100 bg-amber-50/40 text-amber-800',
+    red: 'border-red-200 bg-red-50 text-red-700',
+  }[tone];
+
+  return (
+    <section
+      ref={setSectionRef(sectionId)}
+      className={cn('scroll-mt-4 rounded-lg border p-4 shadow-sm', toneClass)}
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+          {icon}
+        </span>
+        <h3 className="text-base font-black text-slate-950">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function FullGameDetail({
   game,
   source,
   isFavorite,
@@ -593,12 +627,13 @@ function PaginatedGameDetail({
   onSaveAi: (game: GameItem) => void;
   onToggleFavorite: () => void;
 }) {
-  const detailRef = useRef<HTMLDivElement>(null);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [activeSection, setActiveSection] = useState('overview');
 
   useEffect(() => {
-    setPageIndex(0);
+    setActiveSection('overview');
+    scrollContainerRef.current?.scrollTo({ top: 0 });
   }, [game?.id]);
 
   if (!game) {
@@ -615,134 +650,43 @@ function PaginatedGameDetail({
   const isAiGenerated = origin === 'ai';
   const durationDisplay = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} 分钟` : '-';
 
-  const pages = [
-    {
-      title: '概览',
-      content: (
-        <div className="space-y-4">
-          <p className="rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-700">{game.brief_description || '暂无简介'}</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <div className="text-[11px] font-bold text-slate-400">时长</div>
-              <div className="mt-1 text-lg font-black text-slate-900">{durationDisplay}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <div className="text-[11px] font-bold text-slate-400">强度</div>
-              <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.intensity_level}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <div className="text-[11px] font-bold text-slate-400">心率区间</div>
-              <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.heart_rate_zone}</div>
-            </div>
-          </div>
-          <InfoBlock title="核心标签" className="!p-3">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <TagList items={game.tags.targets} tone="teal" />
-              <TagList items={game.tags.space_type} />
-              <TagList items={game.tags.group_size} tone="amber" />
-              <TagList items={[game.tags.equipment_level, ...game.tags.age_groups]} />
-            </div>
-          </InfoBlock>
-        </div>
-      ),
-    },
-    {
-      title: '玩法步骤',
-      content: (
-        <div className="space-y-4">
-          <InfoBlock title="组织策略">
-            <p className="text-sm leading-6 text-slate-700">{game.execution.organization_strategy || <EmptyHint />}</p>
-          </InfoBlock>
-          <InfoBlock title="规则步骤">
-            <DetailList items={game.execution.rules_steps} />
-          </InfoBlock>
-        </div>
-      ),
-    },
-    {
-      title: '场地器材',
-      content: (
-        <div className="grid gap-4 lg:grid-cols-[6fr_4fr]">
-          <InfoBlock title="场地布置">
-            <p className="text-sm leading-6 text-slate-700">{game.setup.layout_instructions || <EmptyHint />}</p>
-          </InfoBlock>
-          <InfoBlock title="器材清单">
-            <DetailList items={game.setup.equipment_list} />
-          </InfoBlock>
-        </div>
-      ),
-    },
-    {
-      title: '安全提示',
-      content: (
-        <section className="rounded-lg border-2 border-red-300 bg-red-50 p-4 shadow-sm">
-          <div className="mb-3 flex items-center gap-2 text-red-700">
-            <AlertTriangle className="h-5 w-5" />
-            <h3 className="text-sm font-black">安全提示</h3>
-          </div>
-          <DetailList items={game.execution.safety_warnings} tone="red" />
-        </section>
-      ),
-    },
-    {
-      title: '教学调整',
-      content: (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <InfoBlock title="提高难度">
-            <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.progression_harder || <EmptyHint />}</p>
-          </InfoBlock>
-          <InfoBlock title="降低难度">
-            <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.regression_easier || <EmptyHint />}</p>
-          </InfoBlock>
-        </div>
-      ),
-    },
+  const navItems = [
+    { id: 'overview', label: '概览', icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'fit', label: '适配', icon: <Target className="h-4 w-4" /> },
+    { id: 'setup', label: '场地器材', icon: <MapPin className="h-4 w-4" /> },
+    { id: 'execution', label: '玩法流程', icon: <LayoutGrid className="h-4 w-4" /> },
+    { id: 'safety', label: '安全提示', icon: <AlertTriangle className="h-4 w-4" /> },
+    { id: 'adjustments', label: '教学调整', icon: <Gauge className="h-4 w-4" /> },
   ];
 
-  const currentPage = pages[pageIndex];
-  const canPrev = pageIndex > 0;
-  const canNext = pageIndex < pages.length - 1;
-
-  const handleScreenshot = async () => {
-    if (!detailRef.current || isCapturing) return;
-    setIsCapturing(true);
-    try {
-      if (window.desktopCapture?.saveElementScreenshot) {
-        const rect = detailRef.current.getBoundingClientRect();
-        await window.desktopCapture.saveElementScreenshot({
-          filename: `${game.title}.png`,
-          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-        });
-        return;
-      }
-
-      const canvas = await html2canvas(detailRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas 转 Blob 失败')), 'image/png');
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${game.title}.png`;
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') console.error('截图保存失败:', error);
-    } finally {
-      setIsCapturing(false);
-    }
+  const setSectionRef = (id: string) => (element: HTMLElement | null) => {
+    sectionRefs.current[id] = element;
   };
 
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleDetailScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const containerTop = container.getBoundingClientRect().top;
+    const nextActive = navItems.reduce((current, item) => {
+      const section = sectionRefs.current[item.id];
+      if (!section) return current;
+      return section.getBoundingClientRect().top - containerTop <= 96 ? item.id : current;
+    }, navItems[0].id);
+
+    setActiveSection((current) => current === nextActive ? current : nextActive);
+  };
+
+
   return (
-    <div ref={detailRef} className="flex h-full min-h-0 flex-col bg-white p-5">
-      {saveMessage && <div className="mb-3 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{saveMessage}</div>}
-      <div className="shrink-0 border-b border-slate-200 pb-4">
+    <div className="flex h-full min-h-0 flex-col bg-white">
+      {saveMessage && <div className="mx-5 mt-5 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{saveMessage}</div>}
+      <div className="shrink-0 border-b border-slate-200 px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-[260px] flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -771,61 +715,150 @@ function PaginatedGameDetail({
               <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
               {isFavorite ? '已收藏' : '收藏'}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleScreenshot} disabled={isCapturing} className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100">
-              <Download className="h-3.5 w-3.5" />
-              {isCapturing ? '截图中...' : '截图'}
-            </Button>
             <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
           </div>
         </div>
-      </div>
-
-      <div className="shrink-0 border-b border-slate-100 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            {pages.map((page, index) => (
-              <button
-                key={page.title}
-                type="button"
-                onClick={() => setPageIndex(index)}
-                className={cn(
-                  'h-8 rounded-md border px-3 text-xs font-black transition-colors',
-                  index === pageIndex
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                )}
-              >
-                {index + 1}. {page.title}
-              </button>
-            ))}
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Clock3 className="h-3.5 w-3.5" />时长</div>
+            <div className="mt-1 text-lg font-black text-slate-900">{durationDisplay}</div>
           </div>
-          <div className="text-xs font-bold text-slate-400">{pageIndex + 1} / {pages.length}</div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Gauge className="h-3.5 w-3.5" />强度</div>
+            <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.intensity_level || '-'}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Heart className="h-3.5 w-3.5" />心率区间</div>
+            <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.heart_rate_zone || '-'}</div>
+          </div>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden py-4">
-        <div className="h-full overflow-y-auto pr-1 custom-scrollbar">
-          <h3 className="mb-3 text-lg font-black text-slate-900">{currentPage.title}</h3>
-          {currentPage.content}
+      <div
+        ref={scrollContainerRef}
+
+        className="min-h-0 flex-1 overflow-y-auto bg-slate-50/60 p-5 custom-scrollbar"
+        onScroll={handleDetailScroll}
+      >
+        <div className="mx-auto grid max-w-6xl gap-4 xl:grid-cols-[190px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-0 xl:self-start">
+            <div className="flex gap-2 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 shadow-sm xl:grid xl:overflow-visible">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => scrollToSection(item.id)}
+                  className={cn(
+                    'flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-black transition-colors',
+                    activeSection === item.id
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <main className="min-w-0 space-y-4">
+            <DetailSection sectionId="overview" title="游戏概览" icon={<BookOpen className="h-4 w-4" />} tone="primary" setSectionRef={setSectionRef}>
+              <p className="rounded-lg bg-white p-3 text-sm leading-6 text-slate-700 shadow-sm ring-1 ring-primary-100">
+                {game.brief_description || '暂无简介'}
+              </p>
+            </DetailSection>
+
+            <DetailSection sectionId="fit" title="目标与适配" icon={<Target className="h-4 w-4" />} setSectionRef={setSectionRef}>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <InfoBlock title="训练目标" className="!shadow-none">
+                  <TagList items={game.tags.targets} tone="teal" />
+                </InfoBlock>
+                <InfoBlock title="适用对象" className="!shadow-none">
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 text-sm leading-6 text-slate-700">
+                      <Users className="mt-1 h-4 w-4 shrink-0 text-amber-600" />
+                      <span>{game.tags.group_size.join('、') || '未填写人数'}</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm leading-6 text-slate-700">
+                      <BookOpen className="mt-1 h-4 w-4 shrink-0 text-slate-500" />
+                      <span>{game.tags.age_groups.join('、') || '未填写年级'}</span>
+                    </div>
+                  </div>
+                </InfoBlock>
+                <InfoBlock title="场地类型" className="!shadow-none">
+                  <TagList items={game.tags.space_type} />
+                </InfoBlock>
+                <InfoBlock title="器材水平" className="!shadow-none">
+                  <TagList items={[game.tags.equipment_level || '未填写器材水平']} tone="amber" />
+                </InfoBlock>
+              </div>
+            </DetailSection>
+
+            <DetailSection sectionId="setup" title="场地与器材" icon={<MapPin className="h-4 w-4" />} setSectionRef={setSectionRef}>
+              <div className="grid gap-4 lg:grid-cols-[6fr_4fr]">
+                <InfoBlock title="场地布置" className="!shadow-none">
+                  {game.setup.layout_instructions ? (
+                    <p className="text-sm leading-6 text-slate-700">{game.setup.layout_instructions}</p>
+                  ) : (
+                    <EmptyHint />
+                  )}
+                </InfoBlock>
+                <InfoBlock title="器材清单" className="!shadow-none">
+                  <DetailList items={game.setup.equipment_list} />
+                </InfoBlock>
+              </div>
+            </DetailSection>
+
+            <DetailSection sectionId="execution" title="玩法流程" icon={<LayoutGrid className="h-4 w-4" />} tone="amber" setSectionRef={setSectionRef}>
+              <div className="space-y-4">
+                <InfoBlock title="组织策略" className="!shadow-none">
+                  {game.execution.organization_strategy ? (
+                    <p className="text-sm leading-6 text-slate-700">{game.execution.organization_strategy}</p>
+                  ) : (
+                    <EmptyHint />
+                  )}
+                </InfoBlock>
+                <InfoBlock title="规则步骤" className="!shadow-none">
+                  <DetailList items={game.execution.rules_steps} />
+                </InfoBlock>
+              </div>
+            </DetailSection>
+
+            <DetailSection sectionId="safety" title="安全提示" icon={<AlertTriangle className="h-4 w-4" />} tone="red" setSectionRef={setSectionRef}>
+              <DetailList items={game.execution.safety_warnings} tone="red" />
+            </DetailSection>
+
+            <DetailSection sectionId="adjustments" title="教学调整" icon={<Gauge className="h-4 w-4" />} setSectionRef={setSectionRef}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <InfoBlock title="提高难度" className="!shadow-none">
+                  {game.coaching_adjustments.progression_harder ? (
+                    <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.progression_harder}</p>
+                  ) : (
+                    <EmptyHint />
+                  )}
+                </InfoBlock>
+                <InfoBlock title="降低难度" className="!shadow-none">
+                  {game.coaching_adjustments.regression_easier ? (
+                    <p className="text-sm leading-6 text-slate-700">{game.coaching_adjustments.regression_easier}</p>
+                  ) : (
+                    <EmptyHint />
+                  )}
+                </InfoBlock>
+              </div>
+            </DetailSection>
+          </main>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 pt-3">
-        <Button variant="outline" onClick={() => setPageIndex((current) => Math.max(0, current - 1))} disabled={!canPrev} className="h-9 rounded-lg border-slate-200 text-xs font-black">
-          <ChevronLeft className="h-4 w-4" />
-          上一页
-        </Button>
-        {source === 'ai' && (
-          <Button onClick={() => onSaveAi(game)} className="h-9 rounded-lg bg-primary-500 px-4 text-xs font-black text-white hover:bg-primary-600">
+      {source === 'ai' && (
+        <div className="shrink-0 border-t border-amber-200 bg-white px-5 py-3 shadow-[0_-2px_8px_rgba(15,23,42,0.06)]">
+          <Button onClick={() => onSaveAi(game)} className="h-10 w-full rounded-lg bg-primary-500 text-sm font-black text-white hover:bg-primary-600">
             <BookOpen className="h-4 w-4" />
             添加到我的游戏库
           </Button>
-        )}
-        <Button variant="outline" onClick={() => setPageIndex((current) => Math.min(pages.length - 1, current + 1))} disabled={!canNext} className="h-9 rounded-lg border-slate-200 text-xs font-black">
-          下一页
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1236,7 +1269,7 @@ function AiLandingPanel({
 
   if (selectedGame && selectedSource === 'ai') {
     return (
-      <PaginatedGameDetail
+      <FullGameDetail
         game={selectedGame}
         source="ai"
         isFavorite={isFavorite}
@@ -1290,8 +1323,6 @@ function GameDetail({
   onSaveAi: (game: GameItem) => void;
   onToggleFavorite: () => void;
 }) {
-  const detailRef = useRef<HTMLDivElement>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
 
   if (!game) {
     return (
@@ -1308,77 +1339,9 @@ function GameDetail({
   const isBuiltIn = origin === 'seed';
   const durationDisplay = game.metrics.estimated_duration_min > 0 ? `${game.metrics.estimated_duration_min} min` : '—';
 
-  const handleScreenshot = async () => {
-    if (!detailRef.current || isCapturing) return;
-    setIsCapturing(true);
-    try {
-      if (window.desktopCapture?.saveElementScreenshot) {
-        const rect = detailRef.current.getBoundingClientRect();
-        await window.desktopCapture.saveElementScreenshot({
-          filename: `${game.title}.png`,
-          rect: {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-          },
-        });
-        return;
-      }
-
-      // 第一步：先弹出另存为对话框（必须在用户手势上下文中调用）
-      let fileHandle: any = null;
-      if ('showSaveFilePicker' in window) {
-        fileHandle = await (window as any).showSaveFilePicker({
-          suggestedName: `${game.title}.png`,
-          types: [{
-            description: 'PNG 图片',
-            accept: { 'image/png': ['.png'] },
-          }],
-        });
-      }
-
-      // 第二步：截图（不设固定宽高，让 html2canvas 自动适配元素实际尺寸）
-      const canvas = await html2canvas(detailRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (b) resolve(b);
-          else reject(new Error('Canvas 转 Blob 失败'));
-        }, 'image/png');
-      });
-
-      // 第三步：写入文件
-      if (fileHandle) {
-        const writable = await fileHandle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } else {
-        // 降级方案：自动下载
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = `${game.title}.png`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
-    } catch (error: any) {
-      // 用户取消保存（AbortError）不做处理
-      if (error?.name === 'AbortError') return;
-      console.error('截图保存失败:', error);
-    } finally {
-      setIsCapturing(false);
-    }
-  };
 
   return (
-    <div ref={detailRef} className="space-y-4 pb-20 [transform:translateZ(0)]">
+    <div className="space-y-4 pb-20 [transform:translateZ(0)]">
       <div className="border-b border-slate-200 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-[260px] flex-1">
@@ -1414,17 +1377,6 @@ function GameDetail({
             >
               <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
               {isFavorite ? '已收藏' : '收藏'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleScreenshot}
-              disabled={isCapturing}
-              className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-              title="保存为图片"
-            >
-              <Download className="h-3.5 w-3.5" />
-              {isCapturing ? '截图中...' : '截图'}
             </Button>
             <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
           </div>
@@ -1869,7 +1821,7 @@ export function GameLibraryWorkbench() {
 
         {activeTab === 'library' && (
           isLibraryPreview && selectedGame ? (
-            <PaginatedGameDetail
+            <FullGameDetail
               game={selectedGame}
               source={selectedSource}
               isFavorite={isSelectedFavorite}
@@ -1919,7 +1871,7 @@ export function GameLibraryWorkbench() {
 
         {activeTab === 'favorites' && (
           isFavoritesPreview && selectedGame ? (
-            <PaginatedGameDetail
+            <FullGameDetail
               game={selectedGame}
               source={selectedSource}
               isFavorite={isSelectedFavorite}
