@@ -590,7 +590,7 @@ function PaginatedGameDetail({
   isFavorite: boolean;
   saveMessage?: string;
   onCancelPreview: () => void;
-  onSaveAi: () => void;
+  onSaveAi: (game: GameItem) => void;
   onToggleFavorite: () => void;
 }) {
   const detailRef = useRef<HTMLDivElement>(null);
@@ -816,7 +816,7 @@ function PaginatedGameDetail({
           上一页
         </Button>
         {source === 'ai' && (
-          <Button onClick={onSaveAi} className="h-9 rounded-lg bg-primary-500 px-4 text-xs font-black text-white hover:bg-primary-600">
+          <Button onClick={() => onSaveAi(game)} className="h-9 rounded-lg bg-primary-500 px-4 text-xs font-black text-white hover:bg-primary-600">
             <BookOpen className="h-4 w-4" />
             添加到我的游戏库
           </Button>
@@ -1203,7 +1203,7 @@ function AiLandingPanel({
   isFavorite: boolean;
   onSelectGame: (game: GameItem) => void;
   onCancelPreview: () => void;
-  onSaveAi: () => void;
+  onSaveAi: (game: GameItem) => void;
   onToggleFavorite: () => void;
   renderForm: () => ReactNode;
   onOpenForm: () => void;
@@ -1287,7 +1287,7 @@ function GameDetail({
   source: GameSource;
   isFavorite: boolean;
   onCancelPreview: () => void;
-  onSaveAi: () => void;
+  onSaveAi: (game: GameItem) => void;
   onToggleFavorite: () => void;
 }) {
   const detailRef = useRef<HTMLDivElement>(null);
@@ -1479,7 +1479,7 @@ function GameDetail({
 
       {source === 'ai' && (
         <div className="sticky bottom-0 -mx-5 border-t border-amber-200 bg-white px-5 py-3 shadow-[0_-2px_8px_rgba(15,23,42,0.06)]">
-          <Button onClick={onSaveAi} className="h-10 w-full rounded-lg bg-amber-500 text-sm font-black text-white hover:bg-amber-600">
+          <Button onClick={() => onSaveAi(game)} className="h-10 w-full rounded-lg bg-amber-500 text-sm font-black text-white hover:bg-amber-600">
             <Star className="h-4 w-4 fill-white" />
             查看我的游戏库记录
           </Button>
@@ -1675,15 +1675,15 @@ export function GameLibraryWorkbench() {
     }
   };
 
-  const saveAiGame = () => {
-    if (!selectedGame || selectedSource !== 'ai') return;
-    if (libraryGames.some((game) => game.id === selectedGame.id)) {
+  const saveAiGame = (aiGame: GameItem) => {
+    if (!aiGame || getGameOrigin(aiGame) !== 'ai') return;
+    if (libraryGames.some((game) => game.id === aiGame.id || (game as GameItem & { source_ai_game_id?: string }).source_ai_game_id === aiGame.id)) {
       setActiveTab('library');
       setSaveMessage('这个 AI 游戏已经自动记录在我的游戏库。');
       window.setTimeout(() => setSaveMessage(''), 3600);
       return;
     }
-    const savedGame = { ...selectedGame, id: `saved_${Date.now()}` };
+    const savedGame = { ...aiGame, id: `saved_${Date.now()}`, source_ai_game_id: aiGame.id };
     setLibraryGames((current) => {
       const next = [savedGame, ...current];
       void persistUserGames(next, seedIds);

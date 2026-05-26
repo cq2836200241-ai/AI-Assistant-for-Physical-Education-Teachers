@@ -51,7 +51,17 @@ function MainApp() {
   const [lessonPlanV2FullscreenActive, setLessonPlanV2FullscreenActive] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [configAccordionResetKey, setConfigAccordionResetKey] = useState(0);
+  const [lastGeneratedFormFingerprint, setLastGeneratedFormFingerprint] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const lastGeneratedPlan = store.lastGeneratedPlanId
+    ? store.history.find((plan) => plan.id === store.lastGeneratedPlanId) ?? null
+    : null;
+  const hasGeneratedResult = Boolean(
+    lastGeneratedPlan &&
+      lastGeneratedFormFingerprint &&
+      lastGeneratedFormFingerprint === JSON.stringify(store.form),
+  );
 
   // 为需要更多空间的工作区面板自动收起左侧工具栏。
   // 教案资源入口来自左侧工具栏，打开后应保留用户当前的工具栏状态。
@@ -135,6 +145,8 @@ function MainApp() {
     store.setIsGenerating(true);
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
+    store.setLastGeneratedPlanId(null);
+    setLastGeneratedFormFingerprint(null);
     store.setGenerationProgress(0);
     store.setGenerationStatus('');
 
@@ -199,6 +211,8 @@ function MainApp() {
       };
       // Optimistically update local store
       store.addHistory(newPlan);
+      store.setLastGeneratedPlanId(newPlan.id);
+      setLastGeneratedFormFingerprint(JSON.stringify(useAppStore.getState().form));
       // Save to desktop user data
       await saveToHistory(newPlan);
       
@@ -211,18 +225,6 @@ function MainApp() {
     }
   };
 
-  const renderConfigPanel = () => (
-    <div className="w-full h-full">
-      <ConfigPanel
-        onGenerate={handleGenerate}
-        showAdopted={showAdopted}
-        showHistory={showHistory}
-        onToggleAdopted={handleToggleAdopted}
-        onToggleHistory={handleToggleHistory}
-      />
-    </div>
-  );
-
   const closeAllPanels = () => {
     setShowSchedule(false);
     setShowGameLibrary(false);
@@ -233,6 +235,37 @@ function MainApp() {
     setLessonPlanV2FullscreenActive(false);
   };
 
+  const handlePreviewGeneratedResult = () => {
+    const state = useAppStore.getState();
+    const generatedPlan = state.lastGeneratedPlanId
+      ? state.history.find((plan) => plan.id === state.lastGeneratedPlanId)
+      : null;
+
+    if (!generatedPlan) return;
+
+    closeAllPanels();
+    setSettingsOpen(false);
+    setAccountOpen(false);
+    setMobileDrawerOpen(false);
+    state.setPreviewedHistoryPlan(null);
+    state.setCurrentPlanContent(generatedPlan.content);
+  };
+
+  const renderConfigPanel = () => (
+    <div className="w-full h-full">
+      <ConfigPanel
+        onGenerate={handleGenerate}
+        hasGeneratedResult={hasGeneratedResult}
+        onPreviewGeneratedResult={handlePreviewGeneratedResult}
+        showAdopted={showAdopted}
+        showHistory={showHistory}
+        onToggleAdopted={handleToggleAdopted}
+        onToggleHistory={handleToggleHistory}
+        accordionResetKey={configAccordionResetKey}
+      />
+    </div>
+  );
+
   const handleGoHome = () => {
     closeAllPanels();
     setSettingsOpen(false);
@@ -240,6 +273,7 @@ function MainApp() {
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
     setIsConfigCollapsed(false);
+    setConfigAccordionResetKey((prev) => prev + 1);
   };
 
   const handleToggleGameLibrary = () => {

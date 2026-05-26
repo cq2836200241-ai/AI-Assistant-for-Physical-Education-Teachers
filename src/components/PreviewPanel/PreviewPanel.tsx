@@ -64,6 +64,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const isWorkspacePanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
   const [isWorkspaceMaskVisible, setIsWorkspaceMaskVisible] = useState(isWorkspacePanelOpen);
   const shouldRenderWorkspaceMask = isWorkspacePanelOpen || isWorkspaceMaskVisible;
+  const shouldShowGeneratingOverlay = isGenerating && !shouldRenderWorkspaceMask;
   const shouldShowPreviewActions = !!displayContent && !isGenerating && !isWorkspacePanelOpen && !shouldRenderWorkspaceMask;
 
   useEffect(() => {
@@ -433,7 +434,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         />
       )}
 
-      {isGenerating && (
+      {shouldShowGeneratingOverlay && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] max-w-md z-50 bg-white/90 backdrop-blur-md p-6 rounded-2xl shadow-2xl border border-primary-100 flex flex-col items-center">
            <div className="text-lg font-bold text-primary-700 mb-4 animate-pulse">AI 正在制作完美教案...</div>
            <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden">
