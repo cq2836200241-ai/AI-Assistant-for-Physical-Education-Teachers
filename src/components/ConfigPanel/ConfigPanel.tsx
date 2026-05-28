@@ -29,7 +29,7 @@ const accordionTriggerClassName =
   'rounded-[24px] border border-transparent bg-transparent px-4 py-2.5 text-left text-white hover:no-underline hover:bg-white/8 data-[state=open]:rounded-b-[18px] data-[state=open]:border-white/0 data-[state=open]:bg-white/10';
 
 const accordionPanelClassName =
-  'px-4 pb-3 pt-2 space-y-3 rounded-[20px] border-t border-white/14 bg-white/94 text-slate-900';
+  'px-4 pb-3 pt-2 space-y-3 rounded-[20px] border-t border-white/30 bg-white/15 backdrop-blur-xl text-white';
 
 const panelActionCardBaseClassName =
   'group flex w-full items-center justify-between gap-3 rounded-[26px] border px-4 py-4 text-left shadow-[0_12px_28px_rgba(4,44,85,0.18)] backdrop-blur-md transition-all duration-300';
@@ -243,7 +243,7 @@ export function ConfigPanel({
              <AccordionContent className={accordionPanelClassName}>
                
                <div className="space-y-2 mt-2">
-                 <Label className="text-[14px] font-bold text-slate-500">年级选择 <span className="text-red-500">*</span></Label>
+                 <Label className="text-[14px] font-bold text-white/90">年级选择 <span className="text-red-500">*</span></Label>
                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-[13px] sm:text-[14px]">
                    {gradeOptions.map((g) => (
                      <Toggle 
@@ -254,7 +254,7 @@ export function ConfigPanel({
                        className={`px-2 py-2 h-auto rounded-lg transition-all duration-300 ${
                          form.grades.includes(g) 
                            ? '!bg-primary-700 !text-[#fff] scale-[1.08] border-primary-700 font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-primary-700 data-[state=on]:!text-[#fff]' 
-                           : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
+                           : 'text-[14px] border-white/20 bg-white/10 text-white hover:bg-white/20'
                        }`}
                      >
                        {g}
@@ -264,7 +264,7 @@ export function ConfigPanel({
                </div>
 
                <div className="space-y-2">
-                 <Label className="text-[14px] font-bold text-slate-500">学生能力水平 <span className="text-red-500">*</span></Label>
+                 <Label className="text-[14px] font-bold text-white/90">学生能力水平 <span className="text-red-500">*</span></Label>
                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
                    {ABILITY_LEVELS.map((level) => (
                       <Tooltip key={level.id}>
@@ -277,7 +277,7 @@ export function ConfigPanel({
                              className={`w-full px-2 py-2 h-auto flex items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                                form.ability === level.id
                                  ? '!bg-primary-700 !text-[#fff] scale-[1.05] border-primary-700 font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-primary-700 data-[state=on]:!text-[#fff]'
-                                 : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
+                                 : 'text-[14px] border-white/20 bg-white/10 text-white hover:bg-white/20'
                              }`}
                            >
                              <span className="mr-0.5">{level.icon}</span> {level.id}
@@ -292,18 +292,18 @@ export function ConfigPanel({
                  </div>
                </div>
 
-               <div className="border-t border-slate-100 pt-4"></div>
+               <div className="border-t border-white/15 pt-4"></div>
 
                <div className="space-y-1.5">
                  <div className="flex justify-between items-center mb-1">
-                   <Label className="text-[13px] text-slate-500">课程名称 (课题) <span className="text-red-500">*</span></Label>
-                   <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[12px] text-slate-500 hover:text-primary-600" onClick={handleRandom} disabled={isGeneratingTopic}>
+                   <Label className="text-[13px] text-white/90">课程名称 (课题) <span className="text-red-500">*</span></Label>
+                   <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[12px] text-white/70 hover:text-white hover:bg-white/10" onClick={handleRandom} disabled={isGeneratingTopic}>
                      {isGeneratingTopic ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Dices className="w-4 h-4 mr-1" />}
                      随机推荐
                    </Button>
                  </div>
                  <Input 
-                   className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                   className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                    placeholder="如：前滚翻、跳绳" 
                    value={form.courseName || ''}
                    onChange={e => {
@@ -321,9 +321,9 @@ export function ConfigPanel({
 
                <div className="flex gap-3">
                  <div className="space-y-1.5 flex-1">
-                   <Label className="text-[13px] text-slate-500 block mb-1">课时时长</Label>
+                   <Label className="text-[13px] text-white/90 block mb-1">课时时长</Label>
                    <Select value={form.duration || '40分钟'} onValueChange={v => setForm({duration: v})}>
-                     <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600">
+                     <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15">
                        <SelectValue />
                      </SelectTrigger>
                      <SelectContent>
@@ -334,25 +334,25 @@ export function ConfigPanel({
                    </Select>
                  </div>
                  <div className="space-y-1.5 w-28">
-                   <Label className="text-[13px] text-slate-500 block mb-1">班级人数</Label>
-                   <Input type="number" min={10} max={80} value={form.studentCount || 40} onChange={e => setForm({studentCount: parseInt(e.target.value)||40})} className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600" />
+                   <Label className="text-[13px] text-white/90 block mb-1">班级人数</Label>
+                   <Input type="number" min={10} max={80} value={form.studentCount || 40} onChange={e => setForm({studentCount: parseInt(e.target.value)||40})} className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15" />
                  </div>
                </div>
 
                <div className="grid grid-cols-2 gap-3">
                  <div className="space-y-1.5">
-                   <Label className="text-[13px] text-slate-500 block mb-1">教学场地</Label>
+                   <Label className="text-[13px] text-white/90 block mb-1">教学场地</Label>
                    <Input 
-                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                      placeholder="如：操场,体育馆"
                      value={form.venue || ''}
                      onChange={e => setForm({ venue: e.target.value })}
                    />
                  </div>
                  <div className="space-y-1.5">
-                   <Label className="text-[13px] text-slate-500 block mb-1">教具器材</Label>
+                   <Label className="text-[13px] text-white/90 block mb-1">教具器材</Label>
                    <Input 
-                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600"
+                     className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                      placeholder="如：足球,跳绳"
                      value={(form.equipments || []).join(',')}
                      onChange={e => setForm({ equipments: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) })}
@@ -379,9 +379,9 @@ export function ConfigPanel({
             <AccordionContent className={accordionPanelClassName}>
               
               <div className="space-y-1.5 mt-2">
-                <Label className="text-[15px] text-slate-500 block mb-1">课型</Label>
+                <Label className="text-[15px] text-white/90 block mb-1">课型</Label>
                 <Select value={form.courseType || ''} onValueChange={v => setForm({courseType: v})}>
-                  <SelectTrigger className="font-bold h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600">
+                  <SelectTrigger className="font-bold h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15">
                     <SelectValue placeholder="选择课型" />
                   </SelectTrigger>
                   <SelectContent>
@@ -395,8 +395,8 @@ export function ConfigPanel({
 
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center mb-1">
-                  <Label className="text-[15px] text-slate-500">教学重点与难点</Label>
-                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[14px] text-slate-500 hover:text-primary-600" onClick={handleRandomFocus} disabled={isGeneratingFocus}>
+                  <Label className="text-[15px] text-white/90">教学重点与难点</Label>
+                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[14px] text-white/70 hover:text-white hover:bg-white/10" onClick={handleRandomFocus} disabled={isGeneratingFocus}>
                     {isGeneratingFocus ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Dices className="w-4 h-4 mr-1" />}
                     随机推荐
                   </Button>
@@ -405,34 +405,34 @@ export function ConfigPanel({
                   placeholder="选填，例如：重点发力，难点协调。" 
                   value={form.teachingFocus || ''}
                   onChange={e => setForm({teachingFocus: e.target.value})}
-                  className="h-[114px] resize-none text-[14px] px-3 py-2.5 rounded-lg border-slate-200 focus:border-primary-600"
+                  className="h-[114px] resize-none text-[14px] px-3 py-2.5 rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15"
                 />
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="cursor-pointer text-[13px] font-normal" htmlFor="skill-switch">含技能训练</Label>
+                <Label className="cursor-pointer text-[13px] font-normal text-white/90" htmlFor="skill-switch">含技能训练</Label>
                 <Switch id="skill-switch" checked={form.hasSkillTraining ?? true} onCheckedChange={v => setForm({hasSkillTraining: v})} />
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="cursor-pointer text-[13px] font-normal" htmlFor="match-switch">含比赛环节</Label>
+                <Label className="cursor-pointer text-[13px] font-normal text-white/90" htmlFor="match-switch">含比赛环节</Label>
                 <Switch id="match-switch" checked={form.hasMatch ?? false} onCheckedChange={v => setForm({hasMatch: v})} />
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="cursor-pointer text-[13px] font-normal" htmlFor="fitness-switch">含体能训练</Label>
+                <Label className="cursor-pointer text-[13px] font-normal text-white/90" htmlFor="fitness-switch">含体能训练</Label>
                 <Switch id="fitness-switch" checked={form.hasFitness ?? true} onCheckedChange={v => setForm({hasFitness: v})} />
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="cursor-pointer text-[13px] font-normal" htmlFor="game-switch">含游戏环节</Label>
+                <Label className="cursor-pointer text-[13px] font-normal text-white/90" htmlFor="game-switch">含游戏环节</Label>
                 <Switch id="game-switch" checked={form.hasGame ?? true} onCheckedChange={v => setForm({hasGame: v})} />
               </div>
 
-              <div className="space-y-1.5 border-t border-slate-100 pt-3">
-                <Label className="text-[13px] text-slate-500 block mb-1">情感目标</Label>
+              <div className="space-y-1.5 border-t border-white/15 pt-3">
+                <Label className="text-[13px] text-white/90 block mb-1">情感目标</Label>
                 <Select value={form.emotionTarget || ''} onValueChange={v => setForm({emotionTarget: v})}>
-                  <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg border-slate-200 focus:border-primary-600">
+                  <SelectTrigger className="h-auto px-3 py-2.5 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15">
                     <SelectValue placeholder="选择导向" />
                   </SelectTrigger>
                   <SelectContent>
@@ -469,12 +469,12 @@ export function ConfigPanel({
             </AccordionTrigger>
             <AccordionContent className={accordionPanelClassName}>
               <div className={`space-y-3 transition-opacity duration-300 ${!form.customDetailsEnabled ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                <Label className="text-[14px] font-bold text-slate-700 block">上课天气情况</Label>
+                <Label className="text-[14px] font-bold text-white/90 block">上课天气情况</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button 
                     variant={form.weather === '高温' ? 'default' : 'outline'} 
                     size="sm" 
-                    className={`h-auto py-2 transition-all ${form.weather === '高温' ? 'bg-orange-500 hover:bg-orange-600 border-orange-500 text-white shadow-md' : 'text-slate-600 bg-slate-50'}`}
+                    className={`h-auto py-2 transition-all ${form.weather === '高温' ? 'bg-orange-500 hover:bg-orange-600 border-orange-500 text-white shadow-md' : 'text-white bg-white/10 border-white/20 hover:bg-white/20'}`}
                     onClick={() => setForm({ weather: form.weather === '高温' ? '晴天' : '高温' })}
                   >
                     <div className="flex items-center gap-1.5">
@@ -485,7 +485,7 @@ export function ConfigPanel({
                   <Button 
                     variant={form.weather === '雨天' ? 'default' : 'outline'} 
                     size="sm" 
-                    className={`h-auto py-2 transition-all ${form.weather === '雨天' ? 'bg-[#3b82f6] hover:bg-[#2563eb] text-white border-[#3b82f6] shadow-md' : 'text-slate-600 bg-slate-50'}`}
+                    className={`h-auto py-2 transition-all ${form.weather === '雨天' ? 'bg-[#3b82f6] hover:bg-[#2563eb] text-white border-[#3b82f6] shadow-md' : 'text-white bg-white/10 border-white/20 hover:bg-white/20'}`}
                     onClick={() => setForm({ weather: form.weather === '雨天' ? '晴天' : '雨天' })}
                   >
                     <CloudRain className="w-4 h-4 mr-1.5" /> 雨天
@@ -496,40 +496,40 @@ export function ConfigPanel({
               {form.customDetailsEnabled && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="space-y-1.5">
-                    <Label className="text-[13px] text-slate-500 block mb-1">第几课时</Label>
+                    <Label className="text-[13px] text-white/90 block mb-1">第几课时</Label>
                     <Input 
                       placeholder="例：第一课时、第2课时" 
-                      className="h-auto px-3 py-2 text-[14px] rounded-lg bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all"
+                      className="h-auto px-3 py-2 text-[14px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15 focus:ring-0 transition-all"
                       value={form.classPeriod || ''}
                       onChange={e => setForm({classPeriod: e.target.value})}
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-[13px] text-slate-500 block mb-1">反思</Label>
+                    <Label className="text-[13px] text-white/90 block mb-1">反思</Label>
                     <Textarea 
                       placeholder="请输入上课后的反思，或预期的教学反思..." 
-                      className="min-h-[80px] text-[13px] rounded-lg bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all resize-y"
+                      className="min-h-[80px] text-[13px] rounded-lg bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15 focus:ring-0 transition-all resize-y"
                       value={form.reflection || ''}
                       onChange={e => setForm({reflection: e.target.value})}
                     />
                   </div>
 
-                  <div className="space-y-4 pt-3 border-t border-slate-100">
-                    <Label className="text-[14px] font-bold text-slate-700 block mb-2">教案板块定制</Label>
+                  <div className="space-y-4 pt-3 border-t border-white/15">
+                    <Label className="text-[14px] font-bold text-white/90 block mb-2">教案板块定制</Label>
                     
                     <div className="flex items-center justify-between">
-                      <Label className="cursor-pointer text-[13px] text-slate-600 font-normal" htmlFor="include-equipment-switch">场地与器材</Label>
+                      <Label className="cursor-pointer text-[13px] text-white/80 font-normal" htmlFor="include-equipment-switch">场地与器材</Label>
                       <Switch id="include-equipment-switch" checked={form.includeEquipment ?? true} onCheckedChange={v => setForm({includeEquipment: v})} />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <Label className="cursor-pointer text-[13px] text-slate-600 font-normal" htmlFor="include-teacher-activity-switch">教学过程中的教师活动</Label>
+                      <Label className="cursor-pointer text-[13px] text-white/80 font-normal" htmlFor="include-teacher-activity-switch">教学过程中的教师活动</Label>
                       <Switch id="include-teacher-activity-switch" checked={form.includeTeacherActivity ?? true} onCheckedChange={v => setForm({includeTeacherActivity: v})} />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <Label className="cursor-pointer text-[13px] text-slate-600 font-normal" htmlFor="include-reflection-switch">课后反思板块</Label>
+                      <Label className="cursor-pointer text-[13px] text-white/80 font-normal" htmlFor="include-reflection-switch">课后反思板块</Label>
                       <Switch id="include-reflection-switch" checked={form.includeReflection ?? true} onCheckedChange={v => setForm({includeReflection: v})} />
                     </div>
                   </div>
@@ -545,7 +545,7 @@ export function ConfigPanel({
       <div className="mt-2 shrink-0">
         <Button 
            size="lg" 
-           className={`${panelActionCardBaseClassName} h-auto border-emerald-200/35 bg-linear-to-r from-[#35c84a]/95 via-[#2fbd44]/95 to-[#239c35]/95 text-white hover:-translate-y-0.5 hover:border-emerald-100/60 hover:shadow-[0_18px_42px_rgba(35,156,53,0.28)] disabled:translate-y-0 disabled:border-emerald-200/35 disabled:bg-linear-to-r disabled:from-[#35c84a]/95 disabled:via-[#2fbd44]/95 disabled:to-[#239c35]/95 disabled:text-white disabled:opacity-100`}
+           className={`${panelActionCardBaseClassName} h-auto border-white/14 bg-white/12 text-white hover:-translate-y-0.5 hover:border-white/24 hover:bg-white/15 hover:shadow-[0_14px_34px_rgba(4,44,85,0.2)] disabled:translate-y-0 disabled:opacity-60 disabled:border-white/14 disabled:bg-white/12`}
            onClick={handlePrimaryAction}
            disabled={primaryButtonDisabled}
         >
