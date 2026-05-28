@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Activity, Target, Zap, ChevronRight, Info, Search, Loader2, History, Download, Trash2, X, Star, Bookmark, Clock } from 'lucide-react';
 import { useAIProvider } from '../../hooks/useAIProvider';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-import { readDesktopStore, writeDesktopStore } from '../../lib/desktopStorage';
+import { toCanvas } from 'html-to-image';
+import { jsPDF } from 'jspdf';
+import { readDesktopUserStore, writeDesktopUserStore } from '../../lib/desktopStorage';
+import { getCurrentUser } from '../../lib/session';
 
 interface MovementProgression {
   step: string;
@@ -103,6 +104,7 @@ const DEFAULT_DATA: MovementProgression[] = [
 
 export function MovementDecompositionTable() {
   const { generate } = useAIProvider();
+  const username = getCurrentUser() || 'anonymous';
   const [searchTerm, setSearchTerm] = useState('');
   const [data, setData] = useState<MovementProgression[]>(DEFAULT_DATA);
   const [movementName, setMovementName] = useState('标准短跑起跑');
@@ -113,6 +115,7 @@ export function MovementDecompositionTable() {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
   const [favoriteAdded, setFavoriteAdded] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -122,9 +125,9 @@ export function MovementDecompositionTable() {
   useEffect(() => {
     let alive = true;
     Promise.all([
-      readDesktopStore<string[]>(STORAGE_KEY_HISTORY, []),
-      readDesktopStore<FavoriteItem[]>(STORAGE_KEY_FAVORITES, []),
-      readDesktopStore<{ name?: string; data?: MovementProgression[] } | null>(STORAGE_KEY_LAST_RESULT, null),
+      readDesktopUserStore<string[]>(username, STORAGE_KEY_HISTORY, []),
+      readDesktopUserStore<FavoriteItem[]>(username, STORAGE_KEY_FAVORITES, []),
+      readDesktopUserStore<{ name?: string; data?: MovementProgression[] } | null>(username, STORAGE_KEY_LAST_RESULT, null),
     ]).then(([savedHistory, savedFavorites, lastResult]) => {
       if (!alive) return;
       if (Array.isArray(savedHistory)) setSearchHistory(savedHistory);
@@ -142,7 +145,7 @@ export function MovementDecompositionTable() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [username]);
 
   // Click outside to close favorites panel
   useEffect(() => {
@@ -169,7 +172,7 @@ export function MovementDecompositionTable() {
     };
     const updated = [newItem, ...favorites.filter(f => f.name !== movementName)].slice(0, 20);
     setFavorites(updated);
-    void writeDesktopStore(STORAGE_KEY_FAVORITES, updated);
+    void writeDesktopUserStore(username, STORAGE_KEY_FAVORITES, updated);
     setFavoriteAdded(true);
     setTimeout(() => setFavoriteAdded(false), 2000);
   };
@@ -177,7 +180,7 @@ export function MovementDecompositionTable() {
   const removeFavorite = (id: string) => {
     const updated = favorites.filter(f => f.id !== id);
     setFavorites(updated);
-    void writeDesktopStore(STORAGE_KEY_FAVORITES, updated);
+    void writeDesktopUserStore(username, STORAGE_KEY_FAVORITES, updated);
   };
 
   const loadFavorite = (item: FavoriteItem) => {
@@ -189,23 +192,51 @@ export function MovementDecompositionTable() {
   const addToHistory = (term: string) => {
     const updated = [term, ...searchHistory.filter(h => h !== term)].slice(0, 8);
     setSearchHistory(updated);
-    void writeDesktopStore(STORAGE_KEY_HISTORY, updated);
+    void writeDesktopUserStore(username, STORAGE_KEY_HISTORY, updated);
   };
 
   const clearHistory = () => {
     setSearchHistory([]);
-    void writeDesktopStore(STORAGE_KEY_HISTORY, []);
+    void writeDesktopUserStore(username, STORAGE_KEY_HISTORY, []);
   };
 
   const exportToPDF = async () => {
-    if (!tableRef.current) return;
+    if (!tableRef.current || isExporting) return;
+    
+    const defaultFileName = `${movementName}_动作拆解报告.pdf`;
+    let fileHandle: any = null;
+
+    try {
+      if ('showSaveFilePicker' in window) {
+        // Request file picker IMMEDIATELY to preserve user gesture
+        fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultFileName,
+          types: [{
+            description: 'PDF 报告',
+            accept: { 'application/pdf': ['.pdf'] },
+          }],
+        });
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') return; // User cancelled
+      console.warn('File picker failed:', err);
+      // fallback will be used if fileHandle remains null
+    }
+
+    setIsExporting(true);
+    const element = tableRef.current;
     
     try {
-      const element = tableRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const canvas = await toCanvas(element, {
+        pixelRatio: 2,
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        backgroundColor: '#ffffff',
+        style: {
+          overflow: 'visible',
+          height: 'auto',
+          maxHeight: 'none',
+        }
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -263,9 +294,21 @@ export function MovementDecompositionTable() {
         }
       }
 
-      pdf.save(`${movementName}_动作拆解报告.pdf`);
-    } catch (error) {
+      const pdfBlob = pdf.output('blob');
+      
+      if (fileHandle) {
+        const writable = await fileHandle.createWritable();
+        await writable.write(pdfBlob);
+        await writable.close();
+      } else {
+        // Fallback if file picker isn't supported or failed
+        pdf.save(defaultFileName);
+      }
+    } catch (error: any) {
       console.error('PDF 导出失败:', error);
+      alert('PDF 导出失败: ' + (error.message || error));
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -284,8 +327,8 @@ export function MovementDecompositionTable() {
     e.stopPropagation();
     const updated = searchHistory.filter(h => h !== term);
     setSearchHistory(updated);
-    void writeDesktopStore(STORAGE_KEY_HISTORY, updated);
-  }, [searchHistory]);
+    void writeDesktopUserStore(username, STORAGE_KEY_HISTORY, updated);
+  }, [searchHistory, username]);
 
   const handleSearch = async (e?: React.FormEvent, termOverride?: string) => {
     if (e) e.preventDefault();
@@ -351,7 +394,7 @@ data 要求：4-6步，涵盖准备、发力/启动、核心过程、结束/恢�
         addToHistory(displayName);
         setSearchTerm(''); // Clear search after success
         // 保存最后一次搜索结果到桌面数据文件，下次打开时自动显示
-        void writeDesktopStore(STORAGE_KEY_LAST_RESULT, { name: displayName, data: parsedData });
+        void writeDesktopUserStore(username, STORAGE_KEY_LAST_RESULT, { name: displayName, data: parsedData });
       } else {
         setError(result.reason?.trim() || SPORT_MOVEMENT_ERROR);
       }
@@ -523,10 +566,11 @@ data 要求：4-6步，涵盖准备、发力/启动、核心过程、结束/恢�
 
             <button
               onClick={exportToPDF}
-              className="bg-white/10 hover:bg-white/20 text-white p-3 rounded-xl transition-all border border-white/20 shadow-sm"
+              disabled={isExporting}
+              className="bg-white/10 hover:bg-white/20 text-white p-3 rounded-xl transition-all border border-white/20 shadow-sm disabled:opacity-50 flex items-center justify-center min-w-[46px]"
               title="导出为 PDF"
             >
-              <Download className="w-5 h-5" />
+              {isExporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
             </button>
           </div>
         </div>
