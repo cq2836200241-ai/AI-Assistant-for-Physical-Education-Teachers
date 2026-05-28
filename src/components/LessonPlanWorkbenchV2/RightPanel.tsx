@@ -146,12 +146,14 @@ export function RightPanel({
 
   if (!plan) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-        <div className="rounded-full bg-slate-100 p-4">
-          <BookOpen className="h-12 w-12 text-slate-300" />
+      <div className="relative flex h-full flex-col items-center justify-center gap-4 text-center">
+        {/* 背景装饰光晕 */}
+        <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 40%, rgba(99,102,241,0.06), transparent 60%)' }} />
+        <div className="relative rounded-full bg-gradient-to-br from-primary-50 to-primary-100 p-5 shadow-[0_0_40px_rgba(99,102,241,0.08)]">
+          <BookOpen className="h-12 w-12 text-primary-300" />
         </div>
-        <div>
-          <p className="text-base font-semibold text-slate-500">请从左侧选择一个教案</p>
+        <div className="relative">
+          <p className="text-base font-semibold text-slate-600">请从左侧选择一个教案</p>
           <p className="mt-1 text-sm text-slate-400">
             点击教案列表中的任意一项，即可查看完整内容
           </p>
@@ -270,9 +272,9 @@ function PlanDetail({
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-white">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-white to-[#f8f9fc]">
         {/* 顶部信息栏 */}
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white px-6 py-4 pr-[22rem]">
+        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 px-6 py-4 pr-[22rem] backdrop-blur-sm">
           <h2 className="text-lg font-bold text-slate-900">{plan.课题名称}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span className="flex items-center gap-1">
@@ -443,8 +445,8 @@ function LibraryPanel({
   }, [libraryScrollTop]);
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+    <div className="flex h-full flex-col bg-gradient-to-b from-white to-[#f8f9fc]">
+      <div className="shrink-0 border-b border-primary-100/40 bg-gradient-to-r from-primary-50/50 to-transparent px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
@@ -545,8 +547,8 @@ function FavoritesPanel({
   onSelectPlan: (plan: LessonPlanV2) => void;
 }) {
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="shrink-0 border-b border-slate-200 px-6 py-4">
+    <div className="flex h-full flex-col bg-gradient-to-b from-white to-[#f8f9fc]">
+      <div className="shrink-0 border-b border-rose-100/40 bg-gradient-to-r from-rose-50/50 to-transparent px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">

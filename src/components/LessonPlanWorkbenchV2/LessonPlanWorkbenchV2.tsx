@@ -142,20 +142,28 @@ export function LessonPlanWorkbenchV2({
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
+    <div className="flex h-full w-full overflow-hidden rounded-2xl border border-primary-200/40 bg-gradient-to-br from-[#f0f1f8] to-[#f8f9fc] shadow-sm">
       {/* 左侧 25% (2.5:7.5) */}
       {!fullscreenActive && (
-        <div className="min-h-0 w-[25%] shrink-0 overflow-hidden border-r border-slate-200 bg-white">
-          <LeftPanel
-            plansCount={plans.length}
-            favoritesCount={favorites.length}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            onRefresh={handleRefresh}
-            onToggleLibrary={handleToggleLibrary}
-            onPlanGenerated={handlePlanGenerated}
-            onToggleFavorites={handleToggleFavorites}
-          />
+        <div className="relative min-h-0 w-[25%] shrink-0 overflow-hidden border-r border-slate-700/50 bg-gradient-to-b from-primary-700 to-primary-500">
+          {/* MAX Watermark */}
+          <div className="absolute -bottom-8 -right-8 z-0 pointer-events-none select-none -rotate-6">
+            <span className="text-[160px] font-black tracking-tighter text-white/[0.06]">
+              MAX
+            </span>
+          </div>
+          <div className="relative z-10 h-full">
+            <LeftPanel
+              plansCount={plans.length}
+              favoritesCount={favorites.length}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              onRefresh={handleRefresh}
+              onToggleLibrary={handleToggleLibrary}
+              onPlanGenerated={handlePlanGenerated}
+              onToggleFavorites={handleToggleFavorites}
+            />
+          </div>
         </div>
       )}
 

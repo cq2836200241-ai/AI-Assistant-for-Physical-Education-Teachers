@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import {
   AlertTriangle,
   BookOpen,
@@ -718,19 +718,21 @@ function FullGameDetail({
             <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Clock3 className="h-3.5 w-3.5" />时长</div>
-            <div className="mt-1 text-lg font-black text-slate-900">{durationDisplay}</div>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Gauge className="h-3.5 w-3.5" />强度</div>
-            <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.intensity_level || '-'}</div>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400"><Heart className="h-3.5 w-3.5" />心率区间</div>
-            <div className="mt-1 text-lg font-black text-slate-900">{game.metrics.heart_rate_zone || '-'}</div>
-          </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+          <span className="flex items-center gap-1.5 font-medium">
+            <Clock3 className="h-4 w-4 text-primary-500" />
+            {durationDisplay}
+          </span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span className="flex items-center gap-1.5 font-medium">
+            <Gauge className="h-4 w-4 text-amber-500" />
+            {game.metrics.intensity_level || '-'}强度
+          </span>
+          <span className="h-3 w-px bg-slate-300" />
+          <span className="flex items-center gap-1.5 font-medium">
+            <Heart className="h-4 w-4 text-rose-500" />
+            {game.metrics.heart_rate_zone ? `${game.metrics.heart_rate_zone} bpm` : '-'}
+          </span>
         </div>
       </div>
 
@@ -916,19 +918,15 @@ function SidebarNavButton({
   tone?: 'primary' | 'amber' | 'rose';
   onClick: () => void;
 }) {
-  const activeClass = {
-    primary: 'border-primary-200 bg-primary-50 text-primary-700',
-    amber: 'border-amber-200 bg-amber-50 text-amber-700',
-    rose: 'border-rose-200 bg-rose-50 text-rose-700',
-  }[tone];
-
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left shadow-sm transition',
-        active ? activeClass : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+        'flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-all',
+        active
+          ? 'bg-white/20 backdrop-blur-md border-white/50 text-white shadow-[0_4px_20px_rgba(255,255,255,0.1)]'
+          : 'bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/15 hover:border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.1)]'
       )}
     >
       <span className="flex min-w-0 items-center gap-2 text-sm font-black">
@@ -936,7 +934,7 @@ function SidebarNavButton({
         <span className="truncate">{label}</span>
       </span>
       {typeof count === 'number' && (
-        <span className="ml-2 shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+        <span className="ml-2 shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white ring-1 ring-white/30">
           {count}
         </span>
       )}
@@ -1732,11 +1730,17 @@ export function GameLibraryWorkbench() {
 
   return (
     <div className="flex h-full w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 shadow-sm">
-      <aside className="min-h-0 w-[25%] shrink-0 overflow-hidden border-r border-slate-200 bg-white">
-        <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar">
+      <aside className="relative min-h-0 w-[25%] shrink-0 overflow-hidden border-r border-slate-700/50 bg-gradient-to-b from-primary-700 to-primary-500">
+        {/* GAME Watermark */}
+        <div className="absolute -bottom-4 -right-2 z-0 pointer-events-none select-none -rotate-6">
+          <span className="text-[100px] font-black tracking-tighter text-white/[0.06]">
+            GAME
+          </span>
+        </div>
+        <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar text-white">
           <SidebarNavButton
             active={activeTab === 'ai'}
-            icon={<Sparkles className="h-4 w-4 shrink-0 text-amber-500" />}
+            icon={<Sparkles className="h-4 w-4 shrink-0 text-amber-300" />}
             label="AI生成游戏"
             count={aiGames.length}
             tone="amber"
@@ -1744,7 +1748,7 @@ export function GameLibraryWorkbench() {
           />
           <SidebarNavButton
             active={activeTab === 'library'}
-            icon={<BookOpen className="h-4 w-4 shrink-0 text-primary-500" />}
+            icon={<BookOpen className="h-4 w-4 shrink-0 text-blue-300" />}
             label="我的游戏库"
             count={libraryGames.length}
             tone="primary"
@@ -1752,7 +1756,7 @@ export function GameLibraryWorkbench() {
           />
           <SidebarNavButton
             active={activeTab === 'favorites'}
-            icon={<Heart className="h-4 w-4 shrink-0 text-rose-500" />}
+            icon={<Heart className="h-4 w-4 shrink-0 text-rose-400" />}
             label="游戏收藏库"
             count={favoriteGames.length}
             tone="rose"

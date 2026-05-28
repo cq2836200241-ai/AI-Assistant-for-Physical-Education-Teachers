@@ -247,7 +247,7 @@ export const useAppStore = create<AppState>()((set) => ({
       
       providers: defaultProviders,
       activeProviderId: 'gemini',
-      theme: 'ocean',
+      theme: 'aurora',
       setTheme: (theme) => set({ theme: resolveTheme(theme) }),
       setActiveProviderId: (id) => set({ activeProviderId: id }),
       updateProvider: (id, config) => set((state) => ({
@@ -360,11 +360,11 @@ export function getPersistedAppState(state = useAppStore.getState()): PersistedA
   };
 }
 
-const AVAILABLE_THEMES = new Set(['ocean', 'sunset', 'cyan-blue', 'minimal']);
-const REMOVED_THEMES = new Set(['dark', 'dream', 'aurora', 'insight-grid']);
+const AVAILABLE_THEMES = new Set(['ocean', 'sunset', 'cyan-blue', 'minimal', 'aurora']);
+const REMOVED_THEMES = new Set(['dark', 'dream', 'insight-grid']);
 
 function resolveTheme(theme: string | undefined): string {
-  if (!theme || REMOVED_THEMES.has(theme) || !AVAILABLE_THEMES.has(theme)) return 'ocean';
+  if (!theme || REMOVED_THEMES.has(theme) || !AVAILABLE_THEMES.has(theme)) return 'aurora';
   return theme;
 }
 

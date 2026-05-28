@@ -237,6 +237,19 @@
     --theme-bg: #f0f9ff; /* alice blue */
   }
 
+  [data-theme="aurora"] {
+    --theme-p-50: #eef2ff;   /* indigo 50 */
+    --theme-p-100: #e0e7ff;
+    --theme-p-200: #c7d2fe;
+    --theme-p-300: #a5b4fc;
+    --theme-p-400: #818cf8;
+    --theme-p-500: #6366f1;
+    --theme-p-600: #4f46e5;
+    --theme-p-700: #4338ca;
+    --theme-s-500: #8b5cf6;  /* violet 500 */
+    --theme-bg: #fafaff;     /* ultra-light indigo tint */
+  }
+
 }
 
 @layer utilities {

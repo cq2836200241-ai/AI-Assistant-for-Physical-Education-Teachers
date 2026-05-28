@@ -54,12 +54,12 @@ export function DesktopAuthTitleBar() {
 
   return (
     <header
-      className="app-region-drag topbar-meteor-surface z-30 flex shrink-0 items-center justify-end border-b border-white/20 px-3 shadow-md sm:px-4"
+      className="app-region-drag topbar-meteor-surface z-30 flex shrink-0 items-center justify-end border-b border-white/20 shadow-md"
       style={{ height: 'var(--app-titlebar-row1-height)' }}
       onDoubleClick={handleTitleBarDoubleClick}
     >
       <TopBarMeteorBackdrop />
-      <div className="app-region-no-drag relative z-[1]" onDoubleClick={(e) => e.stopPropagation()}>
+      <div className="app-region-no-drag relative z-[1] flex h-full items-center" onDoubleClick={(e) => e.stopPropagation()}>
         <WindowControls />
       </div>
     </header>

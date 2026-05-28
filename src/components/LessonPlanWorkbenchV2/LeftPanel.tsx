@@ -230,17 +230,17 @@ confidence 必须是 0 到 1 之间的小数。`;
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-4 custom-scrollbar text-white">
       {/* 生成新教案表单 */}
-      <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-800">
-          <Sparkles className="h-4 w-4 text-amber-500" />
+      <div className="shrink-0 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md p-4 shadow-[0_8px_32px_rgba(0,0,0,0.15)] transition-shadow">
+        <h3 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-white">
+          <Sparkles className="h-4 w-4 text-amber-300" />
           生成新教案
         </h3>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="v2-topic" className="text-xs font-medium text-slate-600">
+            <Label htmlFor="v2-topic" className="text-xs font-medium text-white/90">
               课题名称
             </Label>
             <Input
@@ -252,16 +252,16 @@ confidence 必须是 0 到 1 之间的小数。`;
                 setTopic(e.target.value);
                 if (errorMsg) setErrorMsg('');
               }}
-              className="mt-1 h-9 text-sm"
+              className="mt-1 h-9 text-sm bg-black/15 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/20"
             />
           </div>
 
           <div>
-            <Label htmlFor="v2-grade" className="text-xs font-medium text-slate-600">
+            <Label htmlFor="v2-grade" className="text-xs font-medium text-white/90">
               年龄段 / 年级
             </Label>
             <Select value={grade} onValueChange={(val) => setGrade(val ?? '')}>
-              <SelectTrigger id="v2-grade" className="mt-1 h-9 text-sm">
+              <SelectTrigger id="v2-grade" className="mt-1 h-9 text-sm bg-black/15 border-white/10 text-white focus:ring-white/20 data-[placeholder]:text-white/40">
                 <SelectValue placeholder="选择年级" />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +275,7 @@ confidence 必须是 0 到 1 之间的小数。`;
           </div>
 
           <div>
-            <Label htmlFor="v2-venue" className="text-xs font-medium text-slate-600">
+            <Label htmlFor="v2-venue" className="text-xs font-medium text-white/90">
               教学场地
             </Label>
             <Input
@@ -283,7 +283,7 @@ confidence 必须是 0 到 1 之间的小数。`;
               placeholder="例如：室内体育馆、田径场..."
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
-              className="mt-1 h-9 text-sm"
+              className="mt-1 h-9 text-sm bg-black/15 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/20"
             />
           </div>
 
@@ -294,7 +294,7 @@ confidence 必须是 0 到 1 之间的小数。`;
           )}
 
           <Button
-            className="mt-1 w-full gap-1.5 bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-sm hover:from-primary-600 hover:to-secondary-600"
+            className="mt-1 w-full gap-1.5 bg-gradient-to-r from-[#8A2387] via-[#E94057] to-[#F27121] text-white shadow-[0_4px_15px_rgba(233,64,87,0.4)] transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_6px_20px_rgba(233,64,87,0.6)] hover:brightness-110 border-0"
             size="sm"
             disabled={!topic.trim() || isGenerating}
             onClick={handleGenerate}
@@ -318,20 +318,20 @@ confidence 必须是 0 到 1 之间的小数。`;
       <button
         type="button"
         onClick={onToggleLibrary}
-        className="shrink-0 rounded-xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-primary-200 hover:bg-primary-50/40"
+        className="shrink-0 rounded-xl border border-white/20 bg-white/10 backdrop-blur-md text-left shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:bg-white/15 hover:border-white/30"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-slate-800">
-            <BookOpen className="h-4 w-4 shrink-0 text-primary-500" />
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-white">
+            <BookOpen className="h-4 w-4 shrink-0 text-blue-300" />
             <span className="truncate">我的教案库</span>
-            <span className="ml-1 shrink-0 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold text-primary-700 ring-1 ring-primary-100">
+            <span className="ml-1 shrink-0 rounded-full bg-sky-400/20 px-2 py-0.5 text-[11px] font-semibold text-sky-200 ring-1 ring-sky-400/30">
               共 {plansCount} 篇
             </span>
           </h3>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1 text-xs text-slate-500 hover:text-primary-600"
+            className="h-7 gap-1 text-xs text-white/60 hover:text-white hover:bg-white/10"
             onClick={onRefresh}
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -340,14 +340,14 @@ confidence 必须是 0 到 1 之间的小数。`;
         </div>
 
         {/* 搜索框 */}
-        <div className="border-b border-slate-100 px-4 py-2">
+        <div className="border-t border-white/10 px-4 py-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/50" />
             <Input
               placeholder="搜索课题或场地..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-8 pl-8 text-xs"
+              className="h-8 pl-8 text-xs bg-black/15 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/20"
             />
           </div>
         </div>
@@ -357,16 +357,16 @@ confidence 必须是 0 到 1 之间的小数。`;
       <button
         type="button"
         onClick={onToggleFavorites}
-        className="flex shrink-0 items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-rose-200 hover:bg-rose-50/40"
+        className="flex shrink-0 items-center justify-between rounded-xl border border-white/20 bg-white/10 backdrop-blur-md px-4 py-3 text-left shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:bg-white/15 hover:border-rose-300/50 hover:shadow-[0_8px_24px_rgba(244,63,94,0.15)]"
       >
-        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-slate-800">
-          <Heart className="h-4 w-4 shrink-0 text-rose-500" />
+        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-white">
+          <Heart className="h-4 w-4 shrink-0 text-rose-400" />
           <span className="truncate">教案收藏</span>
-          <span className="ml-1 shrink-0 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 ring-1 ring-rose-100">
+          <span className="ml-1 shrink-0 rounded-full bg-rose-400/20 px-2 py-0.5 text-[11px] font-semibold text-rose-200 ring-1 ring-rose-400/30">
             {favoritesCount} 篇
           </span>
         </h3>
-        <span className="text-xs text-slate-400">查看 →</span>
+        <span className="text-xs text-white/50">查看 →</span>
       </button>
     </div>
   );

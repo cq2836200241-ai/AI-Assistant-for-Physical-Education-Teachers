@@ -38,7 +38,7 @@ const panelActionCardIconBaseClassName =
   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300';
 
 const settingsRegionClassName =
-  'custom-scrollbar relative max-h-[calc(100%-176px)] shrink-0 overflow-y-auto rounded-[30px] border border-black/10 bg-[linear-gradient(180deg,rgba(148,48,14,0.28),rgba(101,22,6,0.42))] p-2.5 pr-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_36px_rgba(92,24,7,0.2)] sm:p-3 sm:pr-2';
+  'custom-scrollbar relative max-h-[calc(100%-176px)] shrink-0 overflow-y-auto rounded-[30px] border border-black/10 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--theme-p-600)_22%,rgba(8,19,32,0.18)),color-mix(in_srgb,var(--theme-s-500)_28%,rgba(8,19,32,0.22)))] p-2.5 pr-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_36px_rgba(8,19,32,0.16)] sm:p-3 sm:pr-2';
 
 type ConfigPanelProps = {
   onGenerate: (isRegeneration?: boolean) => void;
@@ -253,7 +253,7 @@ export function ConfigPanel({
                        variant="outline"
                        className={`px-2 py-2 h-auto rounded-lg transition-all duration-300 ${
                          form.grades.includes(g) 
-                           ? '!bg-[#1d5398] !text-[#fff] scale-[1.08] border-[#1d5398] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1d5398] data-[state=on]:!text-[#fff]' 
+                           ? '!bg-primary-700 !text-[#fff] scale-[1.08] border-primary-700 font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-primary-700 data-[state=on]:!text-[#fff]' 
                            : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
                        }`}
                      >
@@ -276,7 +276,7 @@ export function ConfigPanel({
                              variant="outline"
                              className={`w-full px-2 py-2 h-auto flex items-center justify-center gap-1 rounded-lg transition-all duration-300 ${
                                form.ability === level.id
-                                 ? '!bg-[#1c428d] !text-[#fff] scale-[1.05] border-[#1c428d] font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-[#1c428d] data-[state=on]:!text-[#fff]'
+                                 ? '!bg-primary-700 !text-[#fff] scale-[1.05] border-primary-700 font-bold shadow-lg ring-2 ring-primary-500/50 ring-offset-1 data-[state=on]:!bg-primary-700 data-[state=on]:!text-[#fff]'
                                  : 'text-[14px] border-slate-200 text-slate-600 hover:bg-slate-50'
                              }`}
                            >
