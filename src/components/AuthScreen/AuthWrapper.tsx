@@ -96,18 +96,20 @@ export function AuthWrapper({ children, desktopTitleBar }: AuthWrapperProps) {
 
     const bootstrap = async () => {
       try {
-        await hydrateDesktopAppState();
-        startDesktopAppPersistence();
-        document.documentElement.setAttribute('data-theme', useAppStore.getState().theme);
-      } catch (error) {
-        console.error('恢复桌面应用状态失败', error);
-      }
-
-      try {
         const session = await initializeSession();
         if (!alive) return;
+        
+        if (session.currentUser) {
+          await hydrateDesktopAppState(session.currentUser);
+        }
+        
+        startDesktopAppPersistence();
+        document.documentElement.setAttribute('data-theme', useAppStore.getState().theme);
+        
         setUsername(session.currentUser);
         setIsLocked(session.locked);
+      } catch (error) {
+        console.error('初始化应用状态失败', error);
       } finally {
         if (alive) setIsReady(true);
       }
@@ -123,7 +125,7 @@ export function AuthWrapper({ children, desktopTitleBar }: AuthWrapperProps) {
   useEffect(() => {
     if (!isReady) return;
     if (!username) {
-      useAppStore.setState({ history: [], previewedHistoryPlan: null });
+      useAppStore.getState().resetToDefault();
       return;
     }
 
@@ -148,6 +150,8 @@ export function AuthWrapper({ children, desktopTitleBar }: AuthWrapperProps) {
   }, [isReady, username]);
 
   const handleLogin = async (user: string) => {
+    await hydrateDesktopAppState(user);
+    document.documentElement.setAttribute('data-theme', useAppStore.getState().theme);
     await setCurrentUser(user);
     setUsername(user);
     setIsLocked(false);
@@ -158,7 +162,7 @@ export function AuthWrapper({ children, desktopTitleBar }: AuthWrapperProps) {
     setUsername(null);
     setIsLocked(false);
     setUnlockPassword('');
-    useAppStore.setState({ history: [], previewedHistoryPlan: null });
+    useAppStore.getState().resetToDefault();
   };
 
   const handleUnlock = async (event: React.FormEvent) => {

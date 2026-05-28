@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('desktopStore', {
   setUser: (username, key, value) => ipcRenderer.invoke('desktop-user-store:set', { username, key, value }),
   getAppState: () => ipcRenderer.invoke('desktop-app-state:get'),
   setAppState: (state) => ipcRenderer.invoke('desktop-app-state:set', { state }),
+  getUserAppState: (username) => ipcRenderer.invoke('desktop-user-app-state:get', { username }),
+  setUserAppState: (username, state) => ipcRenderer.invoke('desktop-user-app-state:set', { username, state }),
 });
 
 contextBridge.exposeInMainWorld('desktopSession', {

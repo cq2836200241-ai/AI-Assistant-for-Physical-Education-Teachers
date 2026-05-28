@@ -1,4 +1,4 @@
-﻿const { app, BrowserWindow, dialog, ipcMain, Notification, Menu, Tray, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, Notification, Menu, Tray, shell, safeStorage } = require('electron');
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
@@ -523,6 +523,38 @@ ipcMain.handle('desktop-app-state:set', async (_event, payload) => {
   const { publicState, encryptedKeys } = splitSensitiveProviderState(payload?.state || {});
   await writeJsonFileAtomic(getStoreFilePath('app-state'), publicState);
   await writeJsonFileAtomic(getStoreFilePath('provider-api-keys'), encryptedKeys);
+  return { ok: true };
+});
+
+ipcMain.handle('desktop-user-app-state:get', async (_event, payload) => {
+  const username = String(payload?.username || desktopSession.currentUser || '').trim();
+  if (!username) return {};
+
+  let publicState = await readJsonFile(getUserStoreFilePath(username, 'app-state'), null);
+  let encryptedKeys = await readJsonFile(getUserStoreFilePath(username, 'provider-api-keys'), null);
+
+  // 历史数据迁移：如果用户专属配置不存在，尝试从全局读取并作为初始数据
+  if (publicState === null && encryptedKeys === null) {
+    publicState = await readJsonFile(getStoreFilePath('app-state'), {});
+    encryptedKeys = await readJsonFile(getStoreFilePath('provider-api-keys'), {});
+    
+    // 如果有旧的全局数据，自动写入到当前用户目录实现平滑继承
+    if (Object.keys(publicState).length > 0 || Object.keys(encryptedKeys).length > 0) {
+      await writeJsonFileAtomic(getUserStoreFilePath(username, 'app-state'), publicState);
+      await writeJsonFileAtomic(getUserStoreFilePath(username, 'provider-api-keys'), encryptedKeys);
+    }
+  }
+
+  return restoreSensitiveProviderState(publicState || {}, encryptedKeys || {});
+});
+
+ipcMain.handle('desktop-user-app-state:set', async (_event, payload) => {
+  const username = String(payload?.username || desktopSession.currentUser || '').trim();
+  if (!username) throw new Error('未登录，无法保存用户配置');
+
+  const { publicState, encryptedKeys } = splitSensitiveProviderState(payload?.state || {});
+  await writeJsonFileAtomic(getUserStoreFilePath(username, 'app-state'), publicState);
+  await writeJsonFileAtomic(getUserStoreFilePath(username, 'provider-api-keys'), encryptedKeys);
   return { ok: true };
 });
 

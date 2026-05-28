@@ -139,6 +139,21 @@ interface AppState {
   adoptedPlans: AdoptedPlan[];
   addAdoptedPlan: (plan: AdoptedPlan) => void;
   removeAdoptedPlan: (id: string) => void;
+  addCourseEntry: (entry: CourseEntry) => void;
+  removeCourseEntry: (day: number, slotId: string) => void;
+  
+  // Display settings
+  autoMist: boolean;
+  setAutoMist: (v: boolean) => void;
+  isTimetableEditMode: boolean;
+  setTimetableEditMode: (v: boolean) => void;
+  classReminderEnabled: boolean;
+  setClassReminderEnabled: (v: boolean) => void;
+  
+  // Adopted Plans
+  adoptedPlans: AdoptedPlan[];
+  addAdoptedPlan: (plan: AdoptedPlan) => void;
+  removeAdoptedPlan: (id: string) => void;
   clearAdoptedPlansByClass: (grade: string, className: string) => void;
   
   // Game Library Preview Memory
@@ -146,6 +161,7 @@ interface AppState {
   selectedGameSource: 'local' | 'ai';
   setSelectedGameId: (id: string) => void;
   setSelectedGameSource: (source: 'local' | 'ai') => void;
+  resetToDefault: () => void;
 }
 
 export interface PersistedAppState {
@@ -340,7 +356,25 @@ export const useAppStore = create<AppState>()((set) => ({
       selectedGameId: '',
       selectedGameSource: 'local' as 'local' | 'ai',
       setSelectedGameId: (id) => set({ selectedGameId: id }),
-      setSelectedGameSource: (source) => set({ selectedGameSource: source })
+      setSelectedGameSource: (source) => set({ selectedGameSource: source }),
+      resetToDefault: () => set({
+        form: defaultForm,
+        providers: defaultProviders,
+        activeProviderId: 'gemini',
+        theme: 'aurora',
+        educationLevel: 'primary',
+        classCounts: getDefaultClassCounts(),
+        schedule: {},
+        timetableSlots: DEFAULT_TIME_SLOTS,
+        courseData: defaultCourseData,
+        autoMist: false,
+        classReminderEnabled: false,
+        adoptedPlans: [],
+        history: [],
+        previewedHistoryPlan: null,
+        selectedGameId: '',
+        selectedGameSource: 'local'
+      })
 }));
 
 export function getPersistedAppState(state = useAppStore.getState()): PersistedAppState {

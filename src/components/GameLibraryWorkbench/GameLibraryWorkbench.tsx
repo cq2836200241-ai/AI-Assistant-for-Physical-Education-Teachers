@@ -1056,13 +1056,6 @@ function AiGeneratePanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div className="mx-auto max-w-5xl rounded-xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-            <span className="min-w-0 truncate font-bold">当前 API：{activeProvider?.name || '未选择'} / {activeProvider?.model || '未设置模型'}</span>
-            <span className={cn('shrink-0 font-bold', activeProviderId === 'gemini' || activeProvider?.apiKey ? 'text-emerald-600' : 'text-red-600')}>
-              {activeProviderId === 'gemini' || activeProvider?.apiKey ? '已读取配置' : '缺少 API Key'}
-            </span>
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField label="人数" value={aiForm.groupSize} options={selectOptions.groupSize} onChange={(value) => onAiFormChange({ ...aiForm, groupSize: value })} />
             <SelectField label="场地" value={aiForm.spaceType} options={selectOptions.spaceType} onChange={(value) => onAiFormChange({ ...aiForm, spaceType: value })} />
@@ -1140,6 +1133,15 @@ function GameGridPanel({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastAppliedScrollTopRef = useRef<number | null>(null);
+  const scrollTimeoutRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        window.clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -1169,7 +1171,13 @@ function GameGridPanel({
         onScroll={(event) => {
           const nextScrollTop = event.currentTarget.scrollTop;
           lastAppliedScrollTopRef.current = nextScrollTop;
-          onScroll(nextScrollTop);
+          
+          if (scrollTimeoutRef.current) {
+            window.clearTimeout(scrollTimeoutRef.current);
+          }
+          scrollTimeoutRef.current = window.setTimeout(() => {
+            onScroll(nextScrollTop);
+          }, 300);
         }}
       >
         {games.length === 0 ? (

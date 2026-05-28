@@ -508,7 +508,7 @@ function MainApp() {
           <motion.div
             initial={false}
             animate={{
-              width: isConfigCollapsed ? 0 : 420,
+              width: isConfigCollapsed ? 0 : 360,
               marginRight: isConfigCollapsed ? -24 : 0,
             }}
             transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
@@ -519,11 +519,11 @@ function MainApp() {
             <motion.div
               initial={false}
               animate={{
-                x: isConfigCollapsed ? -420 : 0,
+                x: isConfigCollapsed ? -360 : 0,
                 opacity: isConfigCollapsed ? 0 : 1
               }}
               transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              className="config-panel-frame-surface custom-scrollbar flex h-full w-[420px] shrink-0 flex-col overflow-y-auto rounded-2xl border p-0 pr-2 shadow-sm"
+              className="config-panel-frame-surface custom-scrollbar flex h-full w-[360px] shrink-0 flex-col overflow-y-auto rounded-2xl border p-0 pr-2 shadow-sm"
             >
                {renderConfigPanel()}
             </motion.div>
@@ -540,7 +540,7 @@ function MainApp() {
                   onClick={() => setIsConfigCollapsed(!isConfigCollapsed)}
                   className="fixed top-1/2 -translate-y-1/2 z-50 flex items-center justify-center overflow-visible rounded-full border border-white/20 bg-[color:color-mix(in_srgb,var(--theme-p-500)_72%,var(--theme-s-500))] text-white shadow-[0_8px_22px_rgba(8,19,29,0.22),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md transition-all duration-300 hover:border-white/30 hover:bg-[color:color-mix(in_srgb,var(--theme-p-400)_76%,var(--theme-s-500))] hover:shadow-[0_12px_28px_rgba(8,19,29,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]"
                   style={{
-                    left: isConfigCollapsed ? '6px' : '428px',
+                    left: isConfigCollapsed ? '6px' : '368px',
                     width: '17px',
                     height: '78px'
                   }}
@@ -559,7 +559,7 @@ function MainApp() {
         
         {/* 移动端：抽屉式配置面板 */}
         <Sheet open={isMobile && mobileDrawerOpen} onOpenChange={(open) => setMobileDrawerOpen(open)}>
-          <SheetContent side="left" className="config-panel-theme-gradient w-[90vw] max-w-[420px] p-0 pt-10">
+          <SheetContent side="left" className="config-panel-theme-gradient w-[90vw] max-w-[360px] p-0 pt-10">
             <SheetTitle className="sr-only">教案配置</SheetTitle>
             <SheetDescription className="sr-only">设置年级、课题、课型等教案参数</SheetDescription>
             <div className="h-full overflow-y-auto p-4 custom-scrollbar">
