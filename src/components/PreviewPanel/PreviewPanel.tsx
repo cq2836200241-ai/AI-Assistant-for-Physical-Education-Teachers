@@ -271,7 +271,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      <div className={`px-3 sm:px-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-500 shrink-0 h-auto min-h-[48px] sm:h-[64px] py-2 sm:py-0 shadow-sm flex-wrap gap-y-1.5 ${(showMovement || showSchedule || showGameLibrary) ? 'hidden' : ''}`}>
+      <div className={`px-3 sm:px-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-primary-500 to-secondary-500 shrink-0 h-auto min-h-[48px] sm:h-[64px] py-2 sm:py-0 shadow-sm flex-wrap gap-y-1.5 ${(showMovement || showSchedule || showGameLibrary || (!displayContent && !isGenerating && !previewedHistoryPlan)) ? 'hidden' : ''}`}>
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <div className="font-semibold text-white/90 flex items-center gap-2 truncate" style={{ fontSize: '13px' }}>
             {(!!displayContent || isGenerating || !!previewedHistoryPlan) && (

@@ -240,59 +240,32 @@ export function MovementDecompositionTable() {
       });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.98);
-      const pdf = new jsPDF({
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait',
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const pdfWidth = 210; // A4 纸标准宽度(mm)
       const margin = 10;
-
       const availableWidth = pdfWidth - margin * 2;
-      const availableHeight = pdfHeight - margin * 2;
 
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
 
-      const ratio = Math.min(availableWidth / canvasWidth, availableHeight / canvasHeight);
+      // 按比例缩放以适应 A4 宽度
+      const ratio = availableWidth / canvasWidth;
       const imgWidth = canvasWidth * ratio;
       const imgHeight = canvasHeight * ratio;
 
-      const xOffset = margin + (availableWidth - imgWidth) / 2;
+      // 动态计算 PDF 页面高度 (图片高度 + 上下边距)
+      const pdfHeight = imgHeight + margin * 2;
+
+      const pdf = new jsPDF({
+        unit: 'mm',
+        format: [pdfWidth, pdfHeight],
+        orientation: 'portrait',
+      });
+
+      const xOffset = margin;
       const yOffset = margin;
 
-      if (imgHeight <= availableHeight) {
-        pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
-      } else {
-        const pageCanvasHeight = availableHeight / ratio;
-        let totalHeight = 0;
-        let pageNum = 0;
-
-        while (totalHeight < canvasHeight) {
-          if (pageNum > 0) {
-            pdf.addPage();
-          }
-
-          const currentPageHeight = Math.min(pageCanvasHeight, canvasHeight - totalHeight);
-          const pageCanvas = document.createElement('canvas');
-          pageCanvas.width = canvasWidth;
-          pageCanvas.height = currentPageHeight;
-          const ctx = pageCanvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(canvas, 0, totalHeight, canvasWidth, currentPageHeight, 0, 0, canvasWidth, currentPageHeight);
-          }
-
-          const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
-          const pageImgHeight = currentPageHeight * ratio;
-
-          pdf.addImage(pageImgData, 'JPEG', xOffset, yOffset, imgWidth, pageImgHeight);
-
-          totalHeight += currentPageHeight;
-          pageNum++;
-        }
-      }
+      pdf.addImage(imgData, 'JPEG', xOffset, yOffset, imgWidth, imgHeight);
 
       const pdfBlob = pdf.output('blob');
       
@@ -410,23 +383,22 @@ data 要求：4-6步，涵盖准备、发力/启动、核心过程、结束/恢�
     <div className="w-full h-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 flex flex-col">
       <div className="bg-gradient-to-r from-primary-500 to-secondary-500 px-6 py-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-white shrink-0">
+          <div className="flex items-center gap-2 text-white shrink-0 sm:flex-1">
             <Activity className="w-6 h-6" />
             <h3 className="text-xl font-black">{movementName} 动作拆解</h3>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:flex-1 justify-end" ref={searchContainerRef}>
-            <div className="relative w-full sm:max-w-2xl lg:max-w-4xl flex-1">
-              <form onSubmit={(e) => handleSearch(e)}>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setShowHistory(true)}
-                  placeholder="搜索动作名称 (如: 篮球投篮...)"
-                  className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-12 pr-28 text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all text-[17px] font-medium"
-                />
+          <div className="relative w-full sm:w-[450px] shrink-0" ref={searchContainerRef}>
+            <form onSubmit={(e) => handleSearch(e)}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setShowHistory(true)}
+                placeholder="搜索动作 (如: 篮球投篮)"
+                className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-12 pr-28 text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all text-[17px] font-medium"
+              />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
                 <button 
                   type="submit" 
@@ -483,8 +455,9 @@ data 要求：4-6步，涵盖准备、发力/启动、核心过程、结束/恢�
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+          </div>
 
+          <div className="flex items-center gap-2 w-full sm:flex-1 justify-end">
             <div className="relative" ref={favoritesRef}>
               <button
                 onClick={() => setShowFavorites(!showFavorites)}

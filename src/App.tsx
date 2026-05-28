@@ -283,7 +283,7 @@ function MainApp() {
 
   const handleToggleGameLibrary = () => {
     setLessonPlanV2FullscreenActive(false);
-    setShowGameLibrary(!showGameLibrary);
+    setShowGameLibrary(true);
     setShowMovement(false);
     setShowSchedule(false);
     setShowHistory(false);
@@ -293,7 +293,7 @@ function MainApp() {
 
   const handleToggleMovement = () => {
     setLessonPlanV2FullscreenActive(false);
-    setShowMovement(!showMovement);
+    setShowMovement(true);
     setShowGameLibrary(false);
     setShowSchedule(false);
     setShowHistory(false);
@@ -303,7 +303,7 @@ function MainApp() {
 
   const handleToggleSchedule = () => {
     setLessonPlanV2FullscreenActive(false);
-    setShowSchedule(!showSchedule);
+    setShowSchedule(true);
     setShowGameLibrary(false);
     setShowMovement(false);
     setShowHistory(false);
@@ -313,7 +313,7 @@ function MainApp() {
 
   const handleToggleAdopted = () => {
     setLessonPlanV2FullscreenActive(false);
-    setShowAdopted(!showAdopted);
+    setShowAdopted(true);
     setShowHistory(false);
     setShowGameLibrary(false);
     setShowMovement(false);
@@ -323,7 +323,7 @@ function MainApp() {
 
   const handleToggleHistory = () => {
     setLessonPlanV2FullscreenActive(false);
-    setShowHistory(!showHistory);
+    setShowHistory(true);
     setShowAdopted(false);
     setShowGameLibrary(false);
     setShowMovement(false);
@@ -332,11 +332,7 @@ function MainApp() {
   };
 
   const handleToggleLessonPlanV2 = () => {
-    const next = !showLessonPlanV2;
-    setShowLessonPlanV2(next);
-    if (!next) {
-      setLessonPlanV2FullscreenActive(false);
-    }
+    setShowLessonPlanV2(true);
     setShowHistory(false);
     setShowAdopted(false);
     setShowGameLibrary(false);
@@ -439,7 +435,7 @@ function MainApp() {
           }`}
         >
           <FileText className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">教案生成</span>
+          <span className="hidden sm:inline">教案 MAX</span>
           {showLessonPlanV2 ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
         </Button>
 
@@ -579,11 +575,11 @@ function MainApp() {
             showAdopted={showAdopted}
             showLessonPlanV2={showLessonPlanV2}
             onLessonPlanV2FullscreenChange={setLessonPlanV2FullscreenActive}
-            onToggleSchedule={() => { setShowSchedule(!showSchedule); setShowGameLibrary(false); setShowMovement(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleGameLibrary={() => { setShowGameLibrary(!showGameLibrary); setShowMovement(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleMovement={() => { setShowMovement(!showMovement); setShowGameLibrary(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleHistory={() => { setShowHistory(!showHistory); setShowAdopted(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
-            onToggleAdopted={() => { setShowAdopted(!showAdopted); setShowHistory(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
+            onToggleSchedule={() => { setShowSchedule(true); setShowGameLibrary(false); setShowMovement(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleGameLibrary={() => { setShowGameLibrary(true); setShowMovement(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleMovement={() => { setShowMovement(true); setShowGameLibrary(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleHistory={() => { setShowHistory(true); setShowAdopted(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
+            onToggleAdopted={() => { setShowAdopted(true); setShowHistory(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
           />
 
         </section>

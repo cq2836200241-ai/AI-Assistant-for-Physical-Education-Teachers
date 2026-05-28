@@ -236,7 +236,6 @@ export function ConfigPanel({
                     <span>年级与基础设置</span>
                     <span className="text-[12px] text-emerald-200">*</span>
                   </div>
-                  <div className="text-[12px] text-white/72">设置年级、能力、课题与基础课堂信息</div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -372,7 +371,6 @@ export function ConfigPanel({
                 </div>
                 <div className="min-w-0">
                   <div className="text-[16px] font-bold text-white sm:text-[17px]">教案风格与目标</div>
-                  <div className="text-[12px] text-white/72">控制课型、重难点和教学导向</div>
                 </div>
               </div>
             </AccordionTrigger>
@@ -456,7 +454,6 @@ export function ConfigPanel({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[16px] font-bold text-white sm:text-[17px]">专业教案细节定制</div>
-                  <div className="text-[12px] text-white/72">按需开启课时、天气和板块定制</div>
                 </div>
                 <div onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} className="ml-auto">
                   <Switch 
@@ -578,9 +575,6 @@ export function ConfigPanel({
                   hasGeneratedResult ? '预览生成结果' : '开始制作教案'
                 )}
               </div>
-              <div className="text-[12px] text-white/82">
-                {hasGeneratedResult ? '查看刚刚成功生成的体育教案' : '生成新的体育教案，并进入预览确认流程'}
-              </div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 text-white/88">
@@ -601,7 +595,6 @@ export function ConfigPanel({
             </div>
             <div className="min-w-0">
               <div className="text-[16px] font-bold text-white">教案资源</div>
-              <div className="text-[12px] text-white/75">展开查看已上教案和教案库</div>
             </div>
           </div>
           {resourceExpanded ? (
@@ -629,7 +622,6 @@ export function ConfigPanel({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[15px] font-bold">已上教案</div>
-                  <div className="text-[12px] text-current/75">打开当前已上教案界面</div>
                 </div>
               </Button>
 
@@ -648,7 +640,6 @@ export function ConfigPanel({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[15px] font-bold">教案库</div>
-                  <div className="text-[12px] text-current/75">打开当前教案库界面</div>
                 </div>
               </Button>
             </div>

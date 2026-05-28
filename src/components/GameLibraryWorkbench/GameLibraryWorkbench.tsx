@@ -17,6 +17,7 @@ import {
   Trash2,
   Users,
   X,
+  Dumbbell,
 } from 'lucide-react';
 import gameData from '../../date/large_class_games.json';
 import { CreateGameDialog } from './CreateGameDialog';
@@ -335,12 +336,12 @@ function FilterDropdown({
   return (
     <Popover>
       <PopoverTrigger render={
-        <Button variant="outline" size="sm" className="h-9 min-w-[150px] justify-between border-slate-200 bg-white px-3 text-slate-700 hover:bg-slate-50">
-          <span className="flex min-w-0 items-center gap-2">
+        <Button variant="outline" size="sm" className="h-9 justify-between border-slate-200 bg-white px-2.5 text-slate-700 hover:bg-slate-50">
+          <span className="flex min-w-0 items-center gap-1.5">
             {icon}
             <span className="truncate">{label}</span>
           </span>
-          <span className="flex items-center gap-1 text-xs text-slate-400">
+          <span className="flex items-center gap-1 pl-1 text-xs text-slate-400">
             {selected.length > 0 && <span className="rounded-full bg-primary-50 px-1.5 py-0.5 font-bold text-primary-700">{selected.length}</span>}
             <ChevronDown className="h-3.5 w-3.5" />
           </span>
@@ -694,7 +695,6 @@ function FullGameDetail({
               {isAiGenerated && <Badge className="rounded-md bg-amber-500 text-white">AI 生成</Badge>}
               {isCustom && <Badge className="rounded-md bg-emerald-600 text-white">自建</Badge>}
             </div>
-            <p className="line-clamp-2 text-sm leading-6 text-slate-600">{game.brief_description || <EmptyHint />}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onCancelPreview} className="h-7 gap-1 rounded-md border-slate-300 px-2 text-xs font-bold text-slate-600 hover:bg-slate-100">
@@ -715,7 +715,12 @@ function FullGameDetail({
               <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
               {isFavorite ? '已收藏' : '收藏'}
             </Button>
-            <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
+            {source === 'ai' && (
+              <Button size="sm" onClick={() => onSaveAi(game)} className="h-7 gap-1 rounded-md bg-primary-500 px-2 text-xs font-bold text-white hover:bg-primary-600">
+                <BookOpen className="h-3.5 w-3.5" />
+                添加到我的游戏库
+              </Button>
+            )}
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-600">
@@ -742,7 +747,7 @@ function FullGameDetail({
         className="min-h-0 flex-1 overflow-y-auto bg-slate-50/60 p-5 custom-scrollbar"
         onScroll={handleDetailScroll}
       >
-        <div className="mx-auto grid max-w-6xl gap-4 xl:grid-cols-[190px_minmax(0,1fr)]">
+        <div className="mx-auto grid max-w-6xl gap-4 xl:grid-cols-[142px_minmax(0,1fr)]">
           <aside className="xl:sticky xl:top-0 xl:self-start">
             <div className="flex gap-2 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 shadow-sm xl:grid xl:overflow-visible">
               {navItems.map((item) => (
@@ -751,10 +756,10 @@ function FullGameDetail({
                   type="button"
                   onClick={() => scrollToSection(item.id)}
                   className={cn(
-                    'flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-black transition-colors',
+                    'flex h-9 shrink-0 items-center gap-2 text-xs font-black transition-all pl-2.5 pr-3',
                     activeSection === item.id
-                      ? 'bg-slate-900 text-white'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'border-l-[3px] border-primary-600 bg-slate-50 text-primary-700 rounded-r-md'
+                      : 'border-l-[3px] border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-r-md'
                   )}
                 >
                   {item.icon}
@@ -772,28 +777,31 @@ function FullGameDetail({
             </DetailSection>
 
             <DetailSection sectionId="fit" title="目标与适配" icon={<Target className="h-4 w-4" />} setSectionRef={setSectionRef}>
-              <div className="grid gap-3 lg:grid-cols-2">
-                <InfoBlock title="训练目标" className="!shadow-none">
-                  <TagList items={game.tags.targets} tone="teal" />
-                </InfoBlock>
-                <InfoBlock title="适用对象" className="!shadow-none">
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2 text-sm leading-6 text-slate-700">
-                      <Users className="mt-1 h-4 w-4 shrink-0 text-amber-600" />
-                      <span>{game.tags.group_size.join('、') || '未填写人数'}</span>
-                    </div>
-                    <div className="flex items-start gap-2 text-sm leading-6 text-slate-700">
-                      <BookOpen className="mt-1 h-4 w-4 shrink-0 text-slate-500" />
-                      <span>{game.tags.age_groups.join('、') || '未填写年级'}</span>
-                    </div>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-sm">
+                {game.tags.targets.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <TagList items={game.tags.targets} tone="teal" />
                   </div>
-                </InfoBlock>
-                <InfoBlock title="场地类型" className="!shadow-none">
-                  <TagList items={game.tags.space_type} />
-                </InfoBlock>
-                <InfoBlock title="器材水平" className="!shadow-none">
-                  <TagList items={[game.tags.equipment_level || '未填写器材水平']} tone="amber" />
-                </InfoBlock>
+                )}
+                
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Users className="h-4 w-4 text-amber-600" />
+                  <span>{game.tags.group_size.join('、') || '未填写人数'}</span>
+                  <span className="text-slate-300">·</span>
+                  <span>{game.tags.age_groups.join('、') || '未填写年级'}</span>
+                </div>
+
+                {game.tags.space_type.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-sky-600" />
+                    <TagList items={game.tags.space_type} />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Dumbbell className="h-4 w-4 text-rose-500" />
+                  <TagList items={[game.tags.equipment_level || '常规器材']} tone="amber" />
+                </div>
               </div>
             </DetailSection>
 
@@ -853,14 +861,6 @@ function FullGameDetail({
         </div>
       </div>
 
-      {source === 'ai' && (
-        <div className="shrink-0 border-t border-amber-200 bg-white px-5 py-3 shadow-[0_-2px_8px_rgba(15,23,42,0.06)]">
-          <Button onClick={() => onSaveAi(game)} className="h-10 w-full rounded-lg bg-primary-500 text-sm font-black text-white hover:bg-primary-600">
-            <BookOpen className="h-4 w-4" />
-            添加到我的游戏库
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -982,9 +982,9 @@ function LibrarySearchControls({
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <Input value={searchTerm} onChange={(event) => onSearchTermChange(event.target.value)} placeholder="搜索名称、描述、目标或场地..." className="h-9 rounded-lg border-slate-200 bg-white pl-8 text-xs" />
         </div>
-        <FilterDropdown label="目标筛选" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
-        <FilterDropdown label="场地筛选" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
-        <FilterDropdown label="人数筛选" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
+        <FilterDropdown label="目标" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
+        <FilterDropdown label="场地" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
+        <FilterDropdown label="人数" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
         {activeFilterCount > 0 && (
           <Button variant="ghost" size="sm" onClick={onResetFilters} className="h-9 px-3 text-slate-500 hover:text-rose-600">
             <X className="h-4 w-4" />
@@ -1015,9 +1015,9 @@ function LibrarySearchControls({
           <Input value={searchTerm} onChange={(event) => onSearchTermChange(event.target.value)} placeholder="搜索名称、描述、目标或场地..." className="h-9 rounded-lg border-slate-200 bg-slate-50 pl-8 text-xs focus-visible:bg-white" />
         </div>
         <div className="grid gap-2">
-          <FilterDropdown label="目标筛选" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
-          <FilterDropdown label="场地筛选" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
-          <FilterDropdown label="人数筛选" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
+          <FilterDropdown label="目标" icon={<Target className="h-4 w-4 text-primary-600" />} options={filterOptions.targets} selected={selectedTargets} onChange={onSelectedTargetsChange} />
+          <FilterDropdown label="场地" icon={<MapPin className="h-4 w-4 text-sky-600" />} options={filterOptions.space_type} selected={selectedSpaces} onChange={onSelectedSpacesChange} />
+          <FilterDropdown label="人数" icon={<Users className="h-4 w-4 text-amber-600" />} options={filterOptions.group_size} selected={selectedGroups} onChange={onSelectedGroupsChange} />
         </div>
         <CreateGameDialog onCreate={onCreateGame} />
       </div>
@@ -1055,7 +1055,7 @@ function AiGeneratePanel({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <div className="mx-auto max-w-5xl rounded-xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
+        <div className="mx-auto max-w-3xl rounded-xl border border-amber-200 bg-amber-50/40 p-5 shadow-sm">
           <div className="grid gap-4 md:grid-cols-2">
             <SelectField label="人数" value={aiForm.groupSize} options={selectOptions.groupSize} onChange={(value) => onAiFormChange({ ...aiForm, groupSize: value })} />
             <SelectField label="场地" value={aiForm.spaceType} options={selectOptions.spaceType} onChange={(value) => onAiFormChange({ ...aiForm, spaceType: value })} />
@@ -1063,12 +1063,12 @@ function AiGeneratePanel({
             <SelectField label="主要训练目标" value={aiForm.target} options={selectOptions.target} onChange={(value) => onAiFormChange({ ...aiForm, target: value })} />
             <label className="block md:col-span-2">
               <span className="mb-1.5 block text-xs font-black text-slate-600">特殊情境补充说明</span>
-              <Textarea value={aiForm.context} onChange={(event) => onAiFormChange({ ...aiForm, context: event.target.value })} placeholder="例如：雨后地面较滑、班级注意力容易分散、需要低器材高密度..." className="min-h-28 resize-none border-slate-200 bg-white" />
+              <Textarea value={aiForm.context} onChange={(event) => onAiFormChange({ ...aiForm, context: event.target.value })} placeholder="例如：雨后地面较滑、班级注意力容易分散、需要低器材高密度..." className="min-h-16 resize-none border-slate-200 bg-white" />
             </label>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button onClick={onGenerate} className="h-10 rounded-lg bg-slate-900 px-5 text-sm font-black text-white hover:bg-slate-800">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Button onClick={onGenerate} className="h-10 rounded-lg border-0 bg-gradient-to-r from-amber-500 to-orange-500 px-6 text-sm font-black text-white shadow-lg shadow-amber-500/40 transition-all hover:-translate-y-0.5 hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-500/60">
               <Sparkles className="h-4 w-4" />
               调用 AI 生成游戏
             </Button>
@@ -1081,7 +1081,7 @@ function AiGeneratePanel({
             {hasGeneratedGames && onViewResults && (
               <Button onClick={onViewResults} variant="outline" className="h-10 rounded-lg border-slate-200 bg-white text-sm font-black text-slate-700 hover:bg-slate-50">
                 <LayoutGrid className="h-4 w-4" />
-                鏌ョ湅鏈€杩戠敓鎴愮粨鏋?
+                查看最近生成结果
               </Button>
             )}
           </div>
@@ -1356,7 +1356,6 @@ function GameDetail({
               {isAiGenerated && <Badge className="rounded-md bg-amber-500 text-white">AI 生成</Badge>}
               {isCustom && <Badge className="rounded-md bg-emerald-600 text-white">自建</Badge>}
             </div>
-            <p className="text-sm leading-6 text-slate-600">{game.brief_description || <EmptyHint />}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <Button
@@ -1384,7 +1383,6 @@ function GameDetail({
               <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-rose-500')} />
               {isFavorite ? '已收藏' : '收藏'}
             </Button>
-            <Badge variant="outline" className="h-7 rounded-md border-slate-300 px-2.5 text-slate-600">{game.id}</Badge>
           </div>
         </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
@@ -1750,7 +1748,6 @@ export function GameLibraryWorkbench() {
             active={activeTab === 'ai'}
             icon={<Sparkles className="h-4 w-4 shrink-0 text-amber-300" />}
             label="AI生成游戏"
-            count={aiGames.length}
             tone="amber"
             onClick={() => openTab('ai')}
           />

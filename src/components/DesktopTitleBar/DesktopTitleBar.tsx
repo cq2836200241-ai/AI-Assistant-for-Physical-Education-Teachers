@@ -174,8 +174,8 @@ export function DesktopTitleBar({
             className={`${navBtnBase} ${navBtnActive(showLessonPlanV2)}`}
           >
             <FileText className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden lg:inline">教案生成</span>
-            <span className="hidden sm:inline lg:hidden">教案</span>
+            <span className="hidden lg:inline">教案 MAX</span>
+            <span className="hidden sm:inline lg:hidden">教案 MAX</span>
           </Button>
 
           <Popover>
