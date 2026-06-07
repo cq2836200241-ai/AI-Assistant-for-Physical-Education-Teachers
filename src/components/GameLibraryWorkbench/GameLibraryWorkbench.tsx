@@ -19,6 +19,8 @@ import {
   X,
   Dumbbell,
 } from 'lucide-react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import gameData from '../../date/large_class_games.json';
 import { CreateGameDialog } from './CreateGameDialog';
 import type { GameItem } from '../../types/gameItem';
@@ -598,7 +600,7 @@ function DetailSection({
   return (
     <section
       ref={setSectionRef(sectionId)}
-      className={cn('scroll-mt-4 rounded-lg border p-4 shadow-sm', toneClass)}
+      className={cn('scroll-mt-4 rounded-lg border p-4 shadow-sm gsap-section-anim', toneClass)}
     >
       <div className="mb-3 flex items-center gap-2">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
@@ -629,8 +631,34 @@ function FullGameDetail({
   onToggleFavorite: () => void;
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const detailContainerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [activeSection, setActiveSection] = useState('overview');
+
+  useGSAP(() => {
+    if (!game) return;
+    const tl = gsap.timeline();
+    tl.from(detailContainerRef.current, {
+      opacity: 0,
+      x: 30,
+      duration: 0.4,
+      ease: 'power3.out',
+    })
+    .from('.gsap-header-anim', {
+      opacity: 0,
+      y: -15,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: 'back.out(1.2)'
+    }, '-=0.2')
+    .from('.gsap-section-anim', {
+      opacity: 0,
+      y: 20,
+      duration: 0.4,
+      stagger: 0.1,
+      ease: 'back.out(1.2)'
+    }, '-=0.2');
+  }, { dependencies: [game?.id], scope: detailContainerRef });
 
   useEffect(() => {
     setActiveSection('overview');
@@ -685,9 +713,9 @@ function FullGameDetail({
 
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-white">
-      {saveMessage && <div className="mx-5 mt-5 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{saveMessage}</div>}
-      <div className="shrink-0 border-b border-slate-200 px-5 py-4">
+    <div className="flex h-full min-h-0 flex-col bg-white" ref={detailContainerRef}>
+      {saveMessage && <div className="mx-5 mt-5 shrink-0 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 gsap-header-anim">{saveMessage}</div>}
+      <div className="shrink-0 border-b border-slate-200 px-5 py-4 gsap-header-anim">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-[260px] flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-2">

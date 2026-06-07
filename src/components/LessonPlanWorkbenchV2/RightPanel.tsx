@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, BookOpen, Eye, Heart, MapPin, Maximize2, RefreshCw, Target, Trash2, X } from 'lucide-react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -191,6 +193,32 @@ function PlanDetail({
 }) {
   const flatRows = flattenProcess(plan.教学过程);
   const [isFav, setIsFav] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(() => {
+    if (!plan) return;
+    const tl = gsap.timeline();
+    tl.from(containerRef.current, {
+      opacity: 0,
+      x: 30,
+      duration: 0.4,
+      ease: 'power3.out',
+    })
+    .from('.gsap-header-anim', {
+      opacity: 0,
+      y: -15,
+      duration: 0.4,
+      stagger: 0.05,
+      ease: 'back.out(1.2)'
+    }, '-=0.2')
+    .from('.gsap-section-anim', {
+      opacity: 0,
+      y: 20,
+      duration: 0.4,
+      stagger: 0.1,
+      ease: 'back.out(1.2)'
+    }, '-=0.2');
+  }, { dependencies: [plan?.课题名称, plan?.场地与器材?.教学场地], scope: containerRef });
 
   useEffect(() => {
     let alive = true;
@@ -215,12 +243,13 @@ function PlanDetail({
 
   return (
     <div
+      ref={containerRef}
       className={`relative flex h-full flex-col overflow-hidden bg-white transition-all ${
         fullscreenActive ? 'shadow-inner' : ''
       }`}
     >
       <div
-        className="pointer-events-none absolute inset-x-0 top-4 z-40 flex flex-wrap justify-end gap-2 px-6"
+        className="pointer-events-none absolute inset-x-0 top-4 z-40 flex flex-wrap justify-end gap-2 px-6 gsap-header-anim"
       >
         <Button
           variant="outline"
@@ -274,7 +303,7 @@ function PlanDetail({
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-white to-[#f8f9fc]">
         {/* 顶部信息栏 */}
-        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 px-6 py-4 pr-[22rem] backdrop-blur-sm">
+        <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/80 px-6 py-4 pr-[22rem] backdrop-blur-sm gsap-header-anim">
           <h2 className="text-lg font-bold text-slate-900">{plan.课题名称}</h2>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span className="flex items-center gap-1">
@@ -294,7 +323,7 @@ function PlanDetail({
 
         <div className="space-y-6 p-6">
           {/* 教学目标 */}
-          <MetaSection title="教学目标" icon={<Target className="h-4 w-4 text-blue-500" />}>
+          <MetaSection title="教学目标" icon={<Target className="h-4 w-4 text-blue-500" />} className="gsap-section-anim">
             <div className="grid grid-cols-3 gap-3">
               <MetaCard label="运动能力" text={plan.教学目标.运动能力} color="blue" />
               <MetaCard label="健康行为" text={plan.教学目标.健康行为} color="green" />
@@ -303,7 +332,7 @@ function PlanDetail({
           </MetaSection>
 
           {/* 教学重难点 */}
-          <MetaSection title="教学重难点" icon={<AlertTriangle className="h-4 w-4 text-orange-500" />}>
+          <MetaSection title="教学重难点" icon={<AlertTriangle className="h-4 w-4 text-orange-500" />} className="gsap-section-anim">
             <div className="grid grid-cols-2 gap-3">
               <MetaCard label="教学重点" text={plan.教学重难点.教学重点} color="rose" />
               <MetaCard label="教学难点" text={plan.教学重难点.教学难点} color="purple" />
@@ -311,7 +340,7 @@ function PlanDetail({
           </MetaSection>
 
           {/* 教学过程表格 */}
-          <MetaSection title="教学过程" icon={<BookOpen className="h-4 w-4 text-primary-500" />}>
+          <MetaSection title="教学过程" icon={<BookOpen className="h-4 w-4 text-primary-500" />} className="gsap-section-anim">
             <div className="overflow-x-auto rounded-lg border border-slate-300 bg-white shadow-sm ring-1 ring-slate-200/80">
               <Table className="min-w-[1080px] border-collapse">
                 <TableHeader className="[&_tr]:border-slate-300">
@@ -389,12 +418,12 @@ function PlanDetail({
           </MetaSection>
 
           {/* 器材 */}
-          <MetaSection title="教具器材" icon={<Target className="h-4 w-4 text-slate-500" />}>
+          <MetaSection title="教具器材" icon={<Target className="h-4 w-4 text-slate-500" />} className="gsap-section-anim">
             <p className="text-sm text-slate-700">{plan.场地与器材.教具器材}</p>
           </MetaSection>
 
           {/* 安全措施 */}
-          <MetaSection title="安全措施" icon={<AlertTriangle className="h-4 w-4 text-red-500" />}>
+          <MetaSection title="安全措施" icon={<AlertTriangle className="h-4 w-4 text-red-500" />} className="gsap-section-anim">
             <ul className="list-inside list-disc space-y-1">
               {plan.安全措施.map((item, i) => (
                 <li key={i} className="text-sm text-red-700">
@@ -405,7 +434,7 @@ function PlanDetail({
           </MetaSection>
 
           {/* 课后反思 */}
-          <MetaSection title="课后反思" icon={<RefreshCw className="h-4 w-4 text-slate-500" />}>
+          <MetaSection title="课后反思" icon={<RefreshCw className="h-4 w-4 text-slate-500" />} className="gsap-section-anim">
             <p className="text-sm leading-relaxed text-slate-700">{plan.课后反思}</p>
           </MetaSection>
         </div>
@@ -617,13 +646,15 @@ function MetaSection({
   title,
   icon,
   children,
+  className,
 }: {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={className}>
       <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-slate-800">
         {icon}
         {title}

@@ -9,7 +9,7 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import { saveAs } from 'file-saver';
 import html2pdf from 'html2pdf.js';
 import { exportMarkdownToWord } from '../../utils/markdownToDocx';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { deleteFromHistory, saveToHistory, updateHistoryPlan } from '../AuthScreen/AuthWrapper';
 import { getCurrentUser } from '../../lib/session';
@@ -328,145 +328,126 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         </div>
       </div>
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showSchedule ? 0 : '100%',
-          opacity: showSchedule ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-hidden"
-        style={{
-          visibility: showSchedule ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showSchedule ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <TimetableTable />
-      </motion.div>
+      <AnimatePresence mode="wait">
+        {showSchedule && (
+          <motion.div
+            key="schedule"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <TimetableTable />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showGameLibrary ? 0 : '100%',
-          opacity: showGameLibrary ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-hidden"
-        style={{
-          visibility: showGameLibrary ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showGameLibrary ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <GameLibraryWorkbench />
-      </motion.div>
+        {showGameLibrary && (
+          <motion.div
+            key="game-library"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <GameLibraryWorkbench />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showMovement ? 0 : '100%',
-          opacity: showMovement ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-hidden"
-        style={{
-          visibility: showMovement ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showMovement ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <MovementDecompositionTable />
-      </motion.div>
+        {showMovement && (
+          <motion.div
+            key="movement"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <MovementDecompositionTable />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showHistory ? 0 : '100%',
-          opacity: showHistory ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-y-auto"
-        style={{
-          visibility: showHistory ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showHistory ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <HistoryPanelContent 
-          history={history}
-          onLoadPlan={(plan) => {
-            setResourcePreviewSource('history');
-            setPreviewedHistoryPlan(plan);
-            onToggleHistory?.();
-          }}
-          onDeletePlan={(id) => {
-            removeHistory(id);
-            deleteFromHistory(id);
-          }}
-        />
-      </motion.div>
+        {showHistory && (
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-y-auto"
+          >
+            <HistoryPanelContent 
+              history={history}
+              onLoadPlan={(plan) => {
+                setResourcePreviewSource('history');
+                setPreviewedHistoryPlan(plan);
+                onToggleHistory?.();
+              }}
+              onDeletePlan={(id) => {
+                removeHistory(id);
+                deleteFromHistory(id);
+              }}
+            />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showAdopted ? 0 : '100%',
-          opacity: showAdopted ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-y-auto"
-        style={{
-          visibility: showAdopted ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showAdopted ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <AdoptedPanelContent 
-          adoptedPlans={adoptedPlans}
-          onLoadPlan={(plan) => {
-            setResourcePreviewSource('adopted');
-            setPreviewedHistoryPlan({
-              id: plan.planId,
-              title: plan.title,
-              date: plan.dateAdopted,
-              content: plan.content,
-              tags: [plan.grade, plan.className],
-              summary: '',
-              grades: [plan.grade]
-            });
-            onToggleAdopted?.();
-          }}
-          onDeletePlan={(id) => removeAdoptedPlan(id)}
-          onClearClass={(grade, className) => clearAdoptedPlansByClass(grade, className)}
-        />
-      </motion.div>
+        {showAdopted && (
+          <motion.div
+            key="adopted"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-y-auto"
+          >
+            <AdoptedPanelContent 
+              adoptedPlans={adoptedPlans}
+              onLoadPlan={(plan) => {
+                setResourcePreviewSource('adopted');
+                setPreviewedHistoryPlan({
+                  id: plan.planId,
+                  title: plan.title,
+                  date: plan.dateAdopted,
+                  content: plan.content,
+                  tags: [plan.grade, plan.className],
+                  summary: '',
+                  grades: [plan.grade]
+                });
+                onToggleAdopted?.();
+              }}
+              onDeletePlan={(id) => removeAdoptedPlan(id)}
+              onClearClass={(grade, className) => clearAdoptedPlansByClass(grade, className)}
+            />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showLessonPlanV2 ? 0 : '100%',
-          opacity: showLessonPlanV2 ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-hidden"
-        style={{
-          visibility: showLessonPlanV2 ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showLessonPlanV2 ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <LessonPlanWorkbenchV2 onFullscreenChange={onLessonPlanV2FullscreenChange} />
-      </motion.div>
+        {showLessonPlanV2 && (
+          <motion.div
+            key="lesson-plan-v2"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <LessonPlanWorkbenchV2 onFullscreenChange={onLessonPlanV2FullscreenChange} />
+          </motion.div>
+        )}
 
-      <motion.div
-        initial={false}
-        animate={{
-          x: showCurriculumOverview ? 0 : '100%',
-          opacity: showCurriculumOverview ? 1 : 0,
-        }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="absolute inset-0 z-20 bg-white overflow-hidden"
-        style={{
-          visibility: showCurriculumOverview ? 'visible' as const : 'hidden' as const,
-          pointerEvents: showCurriculumOverview ? 'auto' as const : 'none' as const,
-        }}
-      >
-        <CurriculumOverview />
-      </motion.div>
+        {showCurriculumOverview && (
+          <motion.div
+            key="curriculum-overview"
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="absolute inset-0 z-20 bg-white overflow-hidden"
+          >
+            <CurriculumOverview />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {shouldRenderWorkspaceMask && (
         <motion.div
