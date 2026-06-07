@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Settings,
   User,
+  GraduationCap,
 } from 'lucide-react';
 import logoAnimation from '../../assets/animations/Awesome.json';
 import { SettingsModal } from '../SettingsModal/SettingsModal';
@@ -30,10 +31,12 @@ export type DesktopTitleBarProps = {
   accountOpen: boolean;
   onAccountOpenChange: (open: boolean) => void;
   onGoHome: () => void;
+  showCurriculumOverview: boolean;
   showGameLibrary: boolean;
   showMovement: boolean;
   showSchedule: boolean;
   showLessonPlanV2: boolean;
+  onToggleCurriculumOverview: () => void;
   onToggleGameLibrary: () => void;
   onToggleMovement: () => void;
   onToggleSchedule: () => void;
@@ -74,10 +77,12 @@ export function DesktopTitleBar({
   accountOpen,
   onAccountOpenChange,
   onGoHome,
+  showCurriculumOverview,
   showGameLibrary,
   showMovement,
   showSchedule,
   showLessonPlanV2,
+  onToggleCurriculumOverview,
   onToggleGameLibrary,
   onToggleMovement,
   onToggleSchedule,
@@ -137,6 +142,16 @@ export function DesktopTitleBar({
         onDoubleClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-1 sm:gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleCurriculumOverview}
+            className={`${navBtnBase} ${navBtnActive(showCurriculumOverview)}`}
+          >
+            <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">课程总览</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"

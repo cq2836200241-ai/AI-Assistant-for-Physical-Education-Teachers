@@ -11,7 +11,7 @@ import { TopBarMeteorBackdrop } from './components/TopBarMeteorBackdrop/TopBarMe
 import { ClassReminderWatcher } from './components/ClassReminderWatcher/ClassReminderWatcher';
 import { AuthWrapper, saveToHistory } from './components/AuthScreen/AuthWrapper';
 import { UserMenu } from './components/UserMenu/UserMenu';
-import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, LibraryBig, FileText, MoreHorizontal, Settings, User } from 'lucide-react';
+import { Home, ChevronLeft, ChevronRight, Menu, Calendar, Activity, ChevronUp, ChevronDown, LibraryBig, FileText, MoreHorizontal, Settings, User, GraduationCap } from 'lucide-react';
 import Lottie from 'lottie-react';
 import logoAnimation from './assets/animations/Awesome.json';
 import { initializeSeedDataV2 } from './utils/lessonPlanStorageV2';
@@ -44,6 +44,7 @@ function MainApp() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [showGameLibrary, setShowGameLibrary] = useState(false);
+  const [showCurriculumOverview, setShowCurriculumOverview] = useState(false);
   const [showMovement, setShowMovement] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showAdopted, setShowAdopted] = useState(false);
@@ -66,11 +67,11 @@ function MainApp() {
   // 为需要更多空间的工作区面板自动收起左侧工具栏。
   // 教案资源入口来自左侧工具栏，打开后应保留用户当前的工具栏状态。
   useEffect(() => {
-    const shouldAutoCollapse = showSchedule || showGameLibrary || showMovement || showLessonPlanV2;
+    const shouldAutoCollapse = showSchedule || showGameLibrary || showMovement || showLessonPlanV2 || showCurriculumOverview;
     if (shouldAutoCollapse) {
       setIsConfigCollapsed(true);
     }
-  }, [showSchedule, showGameLibrary, showMovement, showLessonPlanV2]);
+  }, [showSchedule, showGameLibrary, showMovement, showLessonPlanV2, showCurriculumOverview]);
 
   // 检测窗口宽度判断是否为移动端
   useEffect(() => {
@@ -142,6 +143,7 @@ function MainApp() {
     setShowHistory(false);
     setShowAdopted(false);
     setShowLessonPlanV2(false);
+    setShowCurriculumOverview(false);
     store.setIsGenerating(true);
     store.setCurrentPlanContent('');
     store.setPreviewedHistoryPlan(null);
@@ -237,6 +239,7 @@ function MainApp() {
     setShowHistory(false);
     setShowAdopted(false);
     setShowLessonPlanV2(false);
+    setShowCurriculumOverview(false);
     setLessonPlanV2FullscreenActive(false);
   };
 
@@ -281,9 +284,21 @@ function MainApp() {
     setConfigAccordionResetKey((prev) => prev + 1);
   };
 
+  const handleToggleCurriculumOverview = () => {
+    setLessonPlanV2FullscreenActive(false);
+    setShowCurriculumOverview(true);
+    setShowGameLibrary(false);
+    setShowMovement(false);
+    setShowSchedule(false);
+    setShowHistory(false);
+    setShowAdopted(false);
+    setShowLessonPlanV2(false);
+  };
+
   const handleToggleGameLibrary = () => {
     setLessonPlanV2FullscreenActive(false);
     setShowGameLibrary(true);
+    setShowCurriculumOverview(false);
     setShowMovement(false);
     setShowSchedule(false);
     setShowHistory(false);
@@ -294,6 +309,7 @@ function MainApp() {
   const handleToggleMovement = () => {
     setLessonPlanV2FullscreenActive(false);
     setShowMovement(true);
+    setShowCurriculumOverview(false);
     setShowGameLibrary(false);
     setShowSchedule(false);
     setShowHistory(false);
@@ -304,6 +320,7 @@ function MainApp() {
   const handleToggleSchedule = () => {
     setLessonPlanV2FullscreenActive(false);
     setShowSchedule(true);
+    setShowCurriculumOverview(false);
     setShowGameLibrary(false);
     setShowMovement(false);
     setShowHistory(false);
@@ -314,6 +331,7 @@ function MainApp() {
   const handleToggleAdopted = () => {
     setLessonPlanV2FullscreenActive(false);
     setShowAdopted(true);
+    setShowCurriculumOverview(false);
     setShowHistory(false);
     setShowGameLibrary(false);
     setShowMovement(false);
@@ -324,6 +342,7 @@ function MainApp() {
   const handleToggleHistory = () => {
     setLessonPlanV2FullscreenActive(false);
     setShowHistory(true);
+    setShowCurriculumOverview(false);
     setShowAdopted(false);
     setShowGameLibrary(false);
     setShowMovement(false);
@@ -333,6 +352,7 @@ function MainApp() {
 
   const handleToggleLessonPlanV2 = () => {
     setShowLessonPlanV2(true);
+    setShowCurriculumOverview(false);
     setShowHistory(false);
     setShowAdopted(false);
     setShowGameLibrary(false);
@@ -379,6 +399,21 @@ function MainApp() {
       </div>
 
       <div className="relative z-[1] flex items-center gap-1 sm:gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleCurriculumOverview}
+          className={`flex h-8 items-center gap-1 rounded-full px-2 text-[12px] font-bold shadow-none transition-all sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[13px] ${
+            showCurriculumOverview
+              ? 'border-white/60 bg-white/20 text-white shadow-sm'
+              : 'border-white/25 bg-transparent text-white/90 hover:border-white/40 hover:bg-white/15'
+          }`}
+        >
+          <GraduationCap className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">课程总览</span>
+          {showCurriculumOverview ? <ChevronUp className="h-3 w-3 opacity-70" /> : <ChevronDown className="h-3 w-3 opacity-70" />}
+        </Button>
+
         <Button
           variant="outline"
           size="sm"
@@ -484,10 +519,12 @@ function MainApp() {
           accountOpen={accountOpen}
           onAccountOpenChange={setAccountOpen}
           onGoHome={handleGoHome}
+          showCurriculumOverview={showCurriculumOverview}
           showGameLibrary={showGameLibrary}
           showMovement={showMovement}
           showSchedule={showSchedule}
           showLessonPlanV2={showLessonPlanV2}
+          onToggleCurriculumOverview={handleToggleCurriculumOverview}
           onToggleGameLibrary={handleToggleGameLibrary}
           onToggleMovement={handleToggleMovement}
           onToggleSchedule={handleToggleSchedule}
@@ -574,12 +611,13 @@ function MainApp() {
             showHistory={showHistory}
             showAdopted={showAdopted}
             showLessonPlanV2={showLessonPlanV2}
+            showCurriculumOverview={showCurriculumOverview}
             onLessonPlanV2FullscreenChange={setLessonPlanV2FullscreenActive}
-            onToggleSchedule={() => { setShowSchedule(true); setShowGameLibrary(false); setShowMovement(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleGameLibrary={() => { setShowGameLibrary(true); setShowMovement(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleMovement={() => { setShowMovement(true); setShowGameLibrary(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
-            onToggleHistory={() => { setShowHistory(true); setShowAdopted(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
-            onToggleAdopted={() => { setShowAdopted(true); setShowHistory(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
+            onToggleSchedule={() => { setShowSchedule(true); setShowCurriculumOverview(false); setShowGameLibrary(false); setShowMovement(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleGameLibrary={() => { setShowGameLibrary(true); setShowCurriculumOverview(false); setShowMovement(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleMovement={() => { setShowMovement(true); setShowCurriculumOverview(false); setShowGameLibrary(false); setShowSchedule(false); setShowHistory(false); setShowAdopted(false); setShowLessonPlanV2(false); }}
+            onToggleHistory={() => { setShowHistory(true); setShowCurriculumOverview(false); setShowAdopted(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
+            onToggleAdopted={() => { setShowAdopted(true); setShowCurriculumOverview(false); setShowHistory(false); setShowGameLibrary(false); setShowMovement(false); setShowSchedule(false); setShowLessonPlanV2(false); }}
           />
 
         </section>

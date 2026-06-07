@@ -18,6 +18,7 @@ import { TimetableTable } from '../TimetableTable/TimetableTable';
 import { MovementDecompositionTable } from '../MovementDecompositionTable/MovementDecompositionTable';
 import { GameLibraryWorkbench } from '../GameLibraryWorkbench/GameLibraryWorkbench';
 import { LessonPlanWorkbenchV2 } from '../LessonPlanWorkbenchV2/LessonPlanWorkbenchV2';
+import { CurriculumOverview } from '../CurriculumOverview/CurriculumOverview';
 
 interface PreviewPanelProps {
   onGenerate?: (isRegeneration?: boolean) => void;
@@ -27,6 +28,7 @@ interface PreviewPanelProps {
   showHistory?: boolean;
   showAdopted?: boolean;
   showLessonPlanV2?: boolean;
+  showCurriculumOverview?: boolean;
   onLessonPlanV2FullscreenChange?: (active: boolean) => void;
   onToggleSchedule?: () => void;
   onToggleGameLibrary?: () => void;
@@ -37,7 +39,7 @@ interface PreviewPanelProps {
 
 type ResourcePreviewSource = 'history' | 'adopted' | null;
 
-export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, onLessonPlanV2FullscreenChange, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
+export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary = false, showMovement = false, showHistory = false, showAdopted = false, showLessonPlanV2 = false, showCurriculumOverview = false, onLessonPlanV2FullscreenChange, onToggleSchedule, onToggleGameLibrary, onToggleMovement, onToggleHistory, onToggleAdopted }: PreviewPanelProps) {
   const {
     currentPlanContent, isGenerating, form, generationStatus, generationProgress,
     previewedHistoryPlan, setPreviewedHistoryPlan,
@@ -64,7 +66,7 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
   const displayContent = isEditing ? editedContent : (previewedHistoryPlan ? previewedHistoryPlan.content : currentPlanContent);
   const displayTitle = previewedHistoryPlan ? previewedHistoryPlan.title : form.courseName;
   const displayGrades = previewedHistoryPlan ? previewedHistoryPlan.grades : form.grades;
-  const isWorkspacePanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2;
+  const isWorkspacePanelOpen = showSchedule || showGameLibrary || showMovement || showHistory || showAdopted || showLessonPlanV2 || showCurriculumOverview;
   const [isWorkspaceMaskVisible, setIsWorkspaceMaskVisible] = useState(isWorkspacePanelOpen);
   const shouldRenderWorkspaceMask = isWorkspacePanelOpen || isWorkspaceMaskVisible;
   const shouldShowGeneratingOverlay = isGenerating && !shouldRenderWorkspaceMask;
@@ -448,6 +450,22 @@ export function PreviewPanel({ onGenerate, showSchedule = false, showGameLibrary
         }}
       >
         <LessonPlanWorkbenchV2 onFullscreenChange={onLessonPlanV2FullscreenChange} />
+      </motion.div>
+
+      <motion.div
+        initial={false}
+        animate={{
+          x: showCurriculumOverview ? 0 : '100%',
+          opacity: showCurriculumOverview ? 1 : 0,
+        }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="absolute inset-0 z-20 bg-white overflow-hidden"
+        style={{
+          visibility: showCurriculumOverview ? 'visible' as const : 'hidden' as const,
+          pointerEvents: showCurriculumOverview ? 'auto' as const : 'none' as const,
+        }}
+      >
+        <CurriculumOverview />
       </motion.div>
 
       {shouldRenderWorkspaceMask && (
