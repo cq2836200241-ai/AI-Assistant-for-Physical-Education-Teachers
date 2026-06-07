@@ -1,0 +1,188 @@
+
+<h2 class="sr-only">中国小学体育与健康一至六年级运动技能课程总览</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.wrap { padding: 1rem 0; }
+.filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; align-items: center; }
+.filter-bar span { font-size: 13px; color: var(--color-text-secondary); margin-right: 4px; }
+.pill { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); cursor: pointer; background: var(--color-background-primary); color: var(--color-text-secondary); transition: all .15s; }
+.pill:hover { border-color: var(--color-border-primary); color: var(--color-text-primary); }
+.pill.active { background: #185FA5; border-color: #185FA5; color: #E6F1FB; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; transition: border-color .15s; }
+.card:hover { border-color: var(--color-border-primary); }
+.card-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.grade-badge { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.g1,.g2 { background: #E1F5EE; color: #0F6E56; }
+.g3,.g4 { background: #E6F1FB; color: #185FA5; }
+.g5,.g6 { background: #FAEEDA; color: #854F0B; }
+.card-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.semester-tag { margin-left: auto; font-size: 11px; color: var(--color-text-secondary); border: 0.5px solid var(--color-border-tertiary); padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.card-body { padding: 12px 16px; }
+.skill-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.skill-area { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.area-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-right: 4px; margin-bottom: 4px; }
+.tag-run { background: #FAECE7; color: #993C1D; }
+.tag-jump { background: #E6F1FB; color: #185FA5; }
+.tag-throw { background: #FAEEDA; color: #854F0B; }
+.tag-gym { background: #EEEDFE; color: #534AB7; }
+.tag-ball { background: #EAF3DE; color: #3B6D11; }
+.tag-dance { background: #FBEAF0; color: #993556; }
+.tag-swim { background: #E1F5EE; color: #0F6E56; }
+.obj-title { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .04em; margin: 10px 0 5px; }
+.obj-list { list-style: none; }
+.obj-list li { font-size: 12px; color: var(--color-text-secondary); padding: 3px 0; padding-left: 14px; position: relative; line-height: 1.5; }
+.obj-list li::before { content: "·"; position: absolute; left: 2px; color: var(--color-text-tertiary); font-size: 16px; line-height: 1; top: 2px; }
+.section-header { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin: 1.5rem 0 .75rem; padding-bottom: 6px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; gap: 8px; }
+.count-badge { background: var(--color-background-secondary); border-radius: 20px; padding: 2px 8px; font-size: 11px; }
+.hidden { display: none; }
+</style>
+
+<div class="wrap">
+<div class="filter-bar">
+  <span>筛选：</span>
+  <button class="pill active" data-filter="all">全部</button>
+  <button class="pill" data-filter="g1">一年级</button>
+  <button class="pill" data-filter="g2">二年级</button>
+  <button class="pill" data-filter="g3">三年级</button>
+  <button class="pill" data-filter="g4">四年级</button>
+  <button class="pill" data-filter="g5">五年级</button>
+  <button class="pill" data-filter="g6">六年级</button>
+  <button class="pill" data-filter="s1">上学期</button>
+  <button class="pill" data-filter="s2">下学期</button>
+</div>
+
+<div id="content"></div>
+</div>
+
+<script>
+const data = [
+  {
+    grade: 1, sem: 1, gradeLabel: "一年级", gradeClass: "g1",
+    skillName: "走跑游戏 · 基础移动",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "跳跃", cls: "tag-jump" }],
+    objs: ["掌握自然走姿，步伐协调，手脚对侧摆动", "能按口令变换走跑节奏（快走、慢跑）", "跑步时保持直线，不碰撞同伴", "单脚跳、双脚跳起步，落地缓冲意识初建", "通过游戏培养空间感知与简单协作意识"]
+  },
+  {
+    grade: 1, sem: 2, gradeLabel: "一年级", gradeClass: "g1",
+    skillName: "投掷游戏 · 基础体操",
+    areas: [{ label: "投掷", cls: "tag-throw" }, { label: "体操", cls: "tag-gym" }],
+    objs: ["单手原地上手投掷，初步建立出手角度概念", "双手持轻器械（沙包/软球）做简单投准游戏", "滚翻前滚预备动作：低头团身，保护意识", "能完成简单队列队形（横排、纵队、圆形）", "了解运动安全基本规则，不推撞他人"]
+  },
+  {
+    grade: 2, sem: 1, gradeLabel: "二年级", gradeClass: "g2",
+    skillName: "跑跳技能 · 协调发展",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "跳跃", cls: "tag-jump" }],
+    objs: ["30–50米加速跑，启动姿势初步规范化", "跨越障碍跑，培养节奏感与空间判断力", "立定跳远：双脚起跳，摆臂、蹬地、落地三段协调", "跳绳基础：单人连续跳绳10次以上", "通过接力游戏培养团队意识与规则遵守"]
+  },
+  {
+    grade: 2, sem: 2, gradeLabel: "二年级", gradeClass: "g2",
+    skillName: "球类启蒙 · 民间游戏",
+    areas: [{ label: "球类", cls: "tag-ball" }, { label: "舞蹈", cls: "tag-dance" }],
+    objs: ["大球滚动控制：原地拍球5次以上不失控", "踢球初步：脚内侧传球方向感建立", "韵律活动：跟随音乐做简单肢体律动", "民间传统游戏（跳皮筋、丢手绢等）动作要领", "培养对球类运动的兴趣与基本手眼协调"]
+  },
+  {
+    grade: 3, sem: 1, gradeLabel: "三年级", gradeClass: "g3",
+    skillName: "耐久跑 · 前滚翻",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "体操", cls: "tag-gym" }],
+    objs: ["匀速跑400–600米，初步建立配速意识", "跑步呼吸节律：掌握鼻口配合二步一呼吸", "前滚翻完整动作：低头团身→推手→滚动→起身", "能连续完成2次前滚翻，方向保持直线", "了解肌肉酸痛与运动疲劳的基本概念"]
+  },
+  {
+    grade: 3, sem: 2, gradeLabel: "三年级", gradeClass: "g3",
+    skillName: "投掷技术 · 篮球启蒙",
+    areas: [{ label: "投掷", cls: "tag-throw" }, { label: "球类", cls: "tag-ball" }],
+    objs: ["侧向投掷：持轻器械（垒球/沙包）侧身蹬转投掷", "投掷距离与准度兼顾，初步建立「全身发力」意识", "篮球原地运球：单手拍球，控制节奏20次以上", "行进间运球初体验，方向感与球感建立", "了解篮球基本规则（走步、双运）"]
+  },
+  {
+    grade: 4, sem: 1, gradeLabel: "四年级", gradeClass: "g4",
+    skillName: "跨栏跑 · 后滚翻",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "体操", cls: "tag-gym" }],
+    objs: ["跨栏跑：主力腿蹬地，摆动腿积极前伸跨越", "节奏稳定，连续跨越3–5个低矮障碍", "后滚翻：团身→后倒→推手翻转→起身完整完成", "能正确判断并规避滚翻中的颈部受力风险", "跑步步频与步幅关系的初步认知"]
+  },
+  {
+    grade: 4, sem: 2, gradeLabel: "四年级", gradeClass: "g4",
+    skillName: "足球基础 · 跳绳进阶",
+    areas: [{ label: "球类", cls: "tag-ball" }, { label: "跳跃", cls: "tag-jump" }],
+    objs: ["足球脚内侧传接球：稳定传球方向与力度控制", "运球绕障碍：变向运球，保持球不远离脚", "交叉跳绳：单摇双脚交叉跳30次以上", "双人跳绳：节奏配合与入绳时机判断", "了解足球比赛基本规则（越位、界外）"]
+  },
+  {
+    grade: 5, sem: 1, gradeLabel: "五年级", gradeClass: "g5",
+    skillName: "中长跑 · 篮球技术",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "球类", cls: "tag-ball" }],
+    objs: ["800/1000米中长跑测试（男女分组），达到标准", "跑姿技术：前倾角度、摆臂与步频的协调优化", "篮球行进间运球上篮：三步上篮步法初步掌握", "双手胸前传球与接球：出手角度与力度控制", "团队配合意识：简单的传切跑位概念"]
+  },
+  {
+    grade: 5, sem: 2, gradeLabel: "五年级", gradeClass: "g5",
+    skillName: "排球入门 · 武术基础",
+    areas: [{ label: "球类", cls: "tag-ball" }, { label: "舞蹈", cls: "tag-dance" }],
+    objs: ["排球正面双手垫球：手型固定，迎球击打点稳定", "自垫连续10次以上，控制球高度在腰部以上", "武术基本功：弓步、马步、虚步站型规范", "武术基本手型（拳、掌、勾）与基本步型组合", "了解中国传统武术文化内涵与礼仪规范"]
+  },
+  {
+    grade: 6, sem: 1, gradeLabel: "六年级", gradeClass: "g6",
+    skillName: "田径综合 · 体能测评",
+    areas: [{ label: "走跑", cls: "tag-run" }, { label: "跳跃", cls: "tag-jump" }, { label: "投掷", cls: "tag-throw" }],
+    objs: ["50米冲刺跑：起跑反应、加速段、最高速维持完整技术", "跳远技术完整掌握：助跑–起跳–腾空–落地四阶段", "铅球/实心球推：持球手型、蹬地转体、出手角度（约40°）", "完成《国家学生体质健康标准》全项测试", "能对自身体能水平进行初步自我评价"]
+  },
+  {
+    grade: 6, sem: 2, gradeLabel: "六年级", gradeClass: "g6",
+    skillName: "综合球类 · 毕业体能",
+    areas: [{ label: "球类", cls: "tag-ball" }, { label: "游泳", cls: "tag-swim" }],
+    objs: ["乒乓球/羽毛球：正手攻球/平高球基本技术", "对打回合中保持正确站位与击球点判断", "游泳（有条件学校）：蛙泳或自由泳连续游25米", "运动损伤预防：肌肉拉伤、扭伤的初步处置知识", "小学阶段运动技能回顾，培养终身体育锻炼意志"]
+  }
+];
+
+const semLabel = { 1: "上学期", 2: "下学期" };
+const gradeGroups = [
+  { label: "第一学段（1–2年级）", sub: "动作基础养成期", grades: [1, 2] },
+  { label: "第二学段（3–4年级）", sub: "技能习得拓展期", grades: [3, 4] },
+  { label: "第三学段（5–6年级）", sub: "技术巩固综合期", grades: [5, 6] }
+];
+
+let activeFilter = "all";
+
+function renderCard(item) {
+  return `<div class="card" data-grade="g${item.grade}" data-sem="s${item.sem}">
+    <div class="card-header">
+      <span class="grade-badge ${item.gradeClass}">${item.gradeLabel}</span>
+      <span class="card-title">${item.skillName}</span>
+      <span class="semester-tag">${semLabel[item.sem]}</span>
+    </div>
+    <div class="card-body">
+      <div style="margin-bottom:8px;">${item.areas.map(a => `<span class="area-tag ${a.cls}">${a.label}</span>`).join('')}</div>
+      <div class="obj-title">学习目标</div>
+      <ul class="obj-list">${item.objs.map(o => `<li>${o}</li>`).join('')}</ul>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const el = document.getElementById('content');
+  let html = '';
+  for (const grp of gradeGroups) {
+    const items = data.filter(d => grp.grades.includes(d.grade));
+    const filtered = items.filter(d => {
+      if (activeFilter === 'all') return true;
+      if (activeFilter.startsWith('g')) return `g${d.grade}` === activeFilter;
+      if (activeFilter.startsWith('s')) return `s${d.sem}` === activeFilter;
+      return true;
+    });
+    if (filtered.length === 0) continue;
+    html += `<div class="section-header">${grp.label}<span style="font-size:11px;color:var(--color-text-tertiary);font-weight:400;">${grp.sub}</span><span class="count-badge">${filtered.length} 单元</span></div>`;
+    html += `<div class="grid">${filtered.map(renderCard).join('')}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+render();
+
+document.querySelectorAll('.pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    render();
+  });
+});
+</script>
